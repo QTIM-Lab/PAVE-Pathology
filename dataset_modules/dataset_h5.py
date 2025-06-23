@@ -81,12 +81,15 @@ class Whole_Slide_Bag_FP(Dataset):
 		print('transformations: ', self.roi_transforms)
 
 	def __getitem__(self, idx):
-		with h5py.File(self.file_path,'r') as hdf5_file:
-			coord = hdf5_file['coords'][idx]
-		img = self.wsi.read_region(coord, self.patch_level, (self.patch_size, self.patch_size)).convert('RGB')
+		try:
+			with h5py.File(self.file_path,'r') as hdf5_file:
+				coord = hdf5_file['coords'][idx]
+			img = self.wsi.read_region(coord, self.patch_level, (self.patch_size, self.patch_size)).convert('RGB')
 
-		img = self.roi_transforms(img)
-		return {'img': img, 'coord': coord}
+			img = self.roi_transforms(img)
+			return {'img': img, 'coord': coord}
+		except Exception as e:
+			raise RuntimeError(f"Error processing index {idx}: {e}")
 
 class Dataset_All_Bags(Dataset):
 
