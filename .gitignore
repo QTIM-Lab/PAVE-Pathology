@@ -3,3 +3,4 @@ __pycache__/
 notebooks
 
 job_logs/
+checkpoints/
