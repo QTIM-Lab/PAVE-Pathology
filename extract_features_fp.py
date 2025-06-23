@@ -1,7 +1,7 @@
 import time
 import os
 import argparse
-import pdb
+import pandas as pd
 from functools import partial
 
 import torch
@@ -68,6 +68,9 @@ if __name__ == '__main__':
 		raise NotImplementedError
 
 	bags_dataset = Dataset_All_Bags(csv_path)
+
+	df = pd.read_csv(csv_path)
+
 	
 	os.makedirs(args.feat_dir, exist_ok=True)
 	os.makedirs(os.path.join(args.feat_dir, 'pt_files'), exist_ok=True)
@@ -80,41 +83,56 @@ if __name__ == '__main__':
 	model = model.to(device)
 	total = len(bags_dataset)
 
-	loader_kwargs = {'num_workers': 8, 'pin_memory': True} if device.type == "cuda" else {}
+	loader_kwargs = {'num_workers': 16, 'pin_memory': True, 'prefetch_factor': 4} if device.type == "cuda" else {} # Changed to 16, make sure reflected in cpus-per-tasks, request max memory (240GB)
 
 	for bag_candidate_idx in tqdm(range(total)):
+		df.to_csv(os.path.join(args.feat_dir, 'post_feat_ext.csv'), index=False)
+
 		slide_id = bags_dataset[bag_candidate_idx].split(args.slide_ext)[0]
-		bag_name = slide_id+'.h5'
-		h5_file_path = os.path.join(args.data_h5_dir, 'patches', bag_name)
-		slide_file_path = os.path.join(args.data_slide_dir, slide_id+args.slide_ext)
-		print('\nprogress: {}/{}'.format(bag_candidate_idx, total))
-		print(slide_id)
+		try:
+			bag_name = slide_id+'.h5'
+			h5_file_path = os.path.join(args.data_h5_dir, 'patches', bag_name)
+			slide_file_path = os.path.join(args.data_slide_dir, slide_id+args.slide_ext)
+			print('\nprogress: {}/{}'.format(bag_candidate_idx, total))
+			print(slide_id)
 
-		if not args.no_auto_skip and slide_id+'.pt' in dest_files:
-			print('skipped {}'.format(slide_id))
-			continue 
+			if not args.no_auto_skip and slide_id+'.pt' in dest_files:
+				print('skipped {}'.format(slide_id))
+				df.loc[df['slide_id'] == slide_id, 'status'] = 'already_exist'
+				continue 
 
-		output_path = os.path.join(args.feat_dir, 'h5_files', bag_name)
-		time_start = time.time()
-		wsi = openslide.open_slide(slide_file_path)
-		dataset = Whole_Slide_Bag_FP(file_path=h5_file_path, 
-							   		 wsi=wsi, 
-									 img_transforms=img_transforms)
+			output_path = os.path.join(args.feat_dir, 'h5_files', bag_name)
+			time_start = time.time()
+			wsi = openslide.open_slide(slide_file_path)
+			dataset = Whole_Slide_Bag_FP(file_path=h5_file_path, 
+											wsi=wsi, 
+										img_transforms=img_transforms)
 
-		loader = DataLoader(dataset=dataset, batch_size=args.batch_size, **loader_kwargs)
-		output_file_path = compute_w_loader(output_path, loader = loader, model = model, verbose = 1)
+			loader = DataLoader(dataset=dataset, batch_size=args.batch_size, **loader_kwargs)
+			output_file_path = compute_w_loader(output_path, loader = loader, model = model, verbose = 1)
 
-		time_elapsed = time.time() - time_start
-		print('\ncomputing features for {} took {} s'.format(output_file_path, time_elapsed))
+			time_elapsed = time.time() - time_start
+			print('\ncomputing features for {} took {} s'.format(output_file_path, time_elapsed))
 
-		with h5py.File(output_file_path, "r") as file:
-			features = file['features'][:]
-			print('features size: ', features.shape)
-			print('coordinates size: ', file['coords'].shape)
+			df.loc[df['slide_id'] == slide_id, 'status'] = 'features_extracted'
 
-		features = torch.from_numpy(features)
-		bag_base, _ = os.path.splitext(bag_name)
-		torch.save(features, os.path.join(args.feat_dir, 'pt_files', bag_base+'.pt'))
+			with h5py.File(output_file_path, "r") as file:
+				features = file['features'][:]
+				print('features size: ', features.shape)
+				print('coordinates size: ', file['coords'].shape)
+
+			features = torch.from_numpy(features)
+			bag_base, _ = os.path.splitext(bag_name)
+			torch.save(features, os.path.join(args.feat_dir, 'pt_files', bag_base+'.pt'))
+		except Exception as e:
+			print(f"Error processing {slide_id}: {e}")
+			df.loc[df['slide_id'] == slide_id, 'status'] = 'failed_ext'
+			df.loc[df['slide_id'] == slide_id, 'error'] = str(e)
+			continue
+	df.to_csv(os.path.join(args.feat_dir, 'post_feat_ext.csv'), index=False)
+
+	print('\nFeature extraction completed, results saved to {}'.format(args.feat_dir))
+
 
 
 
