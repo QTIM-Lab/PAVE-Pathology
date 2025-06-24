@@ -3,7 +3,7 @@
 #SBATCH --nodes=1
 #SBATCH --qos=normal
 #SBATCH --partition=aa100,al40
-#SBATCH --mem=80GB
+#SBATCH --mem=128GB
 #SBATCH --gres=gpu:1
 #SBATCH --ntasks=16
 #SBATCH --time=12:00:00
