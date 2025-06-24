@@ -95,7 +95,6 @@ elif args.task == 'pathology_classifier':
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_features.csv',
                             data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
                             shuffle = False, 
-                            seed = args.seed, 
                             print_info = True,
                             label_dict = {'insufficient':0, 'normal':1, 'low_grade':2, 'high_grade':3, 'cancer':4, 'atypia':5},
                             patient_strat=False,
