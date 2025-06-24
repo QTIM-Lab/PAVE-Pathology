@@ -1,7 +1,7 @@
 #!/bin/bash
 
 CUDA_VISIBLE_DEVICES=0 python eval.py \
-   --models_exp_code pathology_classifier \
+   --models_exp_code pathology_classifier_s1 \
    --save_exp_code pathology_classifier \
    --task pathology_classifier \
    --k 1 \
