@@ -92,6 +92,8 @@ def summary(model, loader, dataset, args):
 
     # Generate confusion matrix
     cm = confusion_matrix(all_labels, all_preds)
+
+    print('dataset.label_dict:', dataset.label_dict)
     
     # Get actual class labels from dataset
     if hasattr(dataset, 'label_dict'):
