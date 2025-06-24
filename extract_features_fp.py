@@ -66,7 +66,11 @@ if __name__ == '__main__':
 	csv_path = args.csv_path
 	if csv_path is None:
 		raise NotImplementedError
-
+	
+	if not os.path.exists(csv_path):
+		print(f"CSV file not found: {csv_path}, no features to extract.")
+		exit()
+	
 	bags_dataset = Dataset_All_Bags(csv_path)
 
 	df = pd.read_csv(csv_path)

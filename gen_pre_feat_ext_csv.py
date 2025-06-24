@@ -12,8 +12,12 @@ def process_csv_for_feature_extraction(csv_path):
       pd.DataFrame: Processed DataFrame ready for feature extraction.
    """
    # Load the CSV file into a DataFrame
-   df = pd.read_csv(csv_path)
-   print(f"Loaded CSV with {len(df)} rows.")
+   try:
+      df = pd.read_csv(csv_path)
+      print(f"Loaded CSV with {len(df)} rows.")
+   except Exception as e:
+      print(f"Error loading {csv_path}: {e}")
+      exit()
 
    # Remove the .svs file extension from the 'slide_id' column
    df['slide_id'] = df['slide_id'].str.replace('.svs', '', regex=False)
@@ -52,5 +56,8 @@ if __name__ == "__main__":
    # Process the input CSV
    processed_df = process_csv_for_feature_extraction(args.input_csv)
 
-   # Write the processed DataFrame to a new CSV file
-   write_processed_csv(processed_df, args.output_dir)
+   if processed_df is not None:
+      # Write the processed DataFrame to a new CSV file
+      write_processed_csv(processed_df, args.output_dir)
+   else:
+      print("No processed CSV file was created.")
