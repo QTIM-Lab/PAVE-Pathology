@@ -10,9 +10,10 @@ import os
 import pandas as pd
 from utils.utils import *
 from utils.core_utils import Accuracy_Logger
-from sklearn.metrics import roc_auc_score, roc_curve, auc
+from sklearn.metrics import roc_auc_score, roc_curve, auc, confusion_matrix
 from sklearn.preprocessing import label_binarize
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 def initiate_model(args, ckpt_path, device='cuda'):
     print('Init Model')    
@@ -88,6 +89,30 @@ def summary(model, loader, args):
 
     del data
     test_error /= len(loader)
+
+    # Generate confusion matrix
+    cm = confusion_matrix(all_labels, all_preds)
+    
+    # Create confusion matrix plot
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
+                xticklabels=[f'Class {i}' for i in range(args.n_classes)],
+                yticklabels=[f'Class {i}' for i in range(args.n_classes)])
+    plt.title('Confusion Matrix')
+    plt.ylabel('True Label')
+    plt.xlabel('Predicted Label')
+    
+    # Save confusion matrix plot
+    if hasattr(args, 'save_dir'):
+        cm_save_path = os.path.join(args.save_dir, 'confusion_matrix.png')
+        plt.savefig(cm_save_path, dpi=300, bbox_inches='tight')
+        print(f'Confusion matrix saved to: {cm_save_path}')
+    
+    plt.close()
+    
+    # Print confusion matrix to console
+    print('\nConfusion Matrix:')
+    print(cm)
 
     aucs = []
     if len(np.unique(all_labels)) == 1:
