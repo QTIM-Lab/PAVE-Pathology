@@ -63,7 +63,7 @@ class EarlyStopping:
         self.counter = 0
         self.best_score = None
         self.early_stop = False
-        self.val_loss_min = np.Inf
+        self.val_loss_min = np.inf
 
     def __call__(self, epoch, val_loss, model, ckpt_name = 'checkpoint.pt'):
 
@@ -181,6 +181,8 @@ def train(datasets, cur, args):
         early_stopping = None
     print('Done!')
 
+    checkpoint_path = os.path.join(args.results_dir, "s_{}_checkpoint.pt".format(cur))
+    
     for epoch in range(args.max_epochs):
         if args.model_type in ['clam_sb', 'clam_mb'] and not args.no_inst_cluster:     
             train_loop_clam(epoch, model, train_loader, optimizer, args.n_classes, args.bag_weight, writer, loss_fn)
@@ -191,6 +193,11 @@ def train(datasets, cur, args):
             train_loop(epoch, model, train_loader, optimizer, args.n_classes, writer, loss_fn)
             stop = validate(cur, epoch, model, val_loader, args.n_classes, 
                 early_stopping, writer, loss_fn, args.results_dir)
+        
+        # Save checkpoint every N epochs (override previous)
+        """ if epoch % 10 == 0:  # Every 10 epochs
+            torch.save(model.state_dict(), checkpoint_path)
+            print(f'Saved checkpoint at epoch {epoch}') """
         
         if stop: 
             break
@@ -231,44 +238,56 @@ def train_loop_clam(epoch, model, loader, optimizer, n_classes, bag_weight, writ
     train_error = 0.
     train_inst_loss = 0.
     inst_count = 0
+    successful_batches = 0
 
     print('\n')
     for batch_idx, (data, label) in enumerate(loader):
-        data, label = data.to(device), label.to(device)
-        logits, Y_prob, Y_hat, _, instance_dict = model(data, label=label, instance_eval=True)
+        try:
+            data, label = data.to(device), label.to(device)
+            logits, Y_prob, Y_hat, _, instance_dict = model(data, label=label, instance_eval=True)
 
-        acc_logger.log(Y_hat, label)
-        loss = loss_fn(logits, label)
-        loss_value = loss.item()
+            acc_logger.log(Y_hat, label)
+            loss = loss_fn(logits, label)
+            loss_value = loss.item()
 
-        instance_loss = instance_dict['instance_loss']
-        inst_count+=1
-        instance_loss_value = instance_loss.item()
-        train_inst_loss += instance_loss_value
-        
-        total_loss = bag_weight * loss + (1-bag_weight) * instance_loss 
+            instance_loss = instance_dict['instance_loss']
+            inst_count+=1
+            instance_loss_value = instance_loss.item()
+            train_inst_loss += instance_loss_value
+            
+            total_loss = bag_weight * loss + (1-bag_weight) * instance_loss 
 
-        inst_preds = instance_dict['inst_preds']
-        inst_labels = instance_dict['inst_labels']
-        inst_logger.log_batch(inst_preds, inst_labels)
+            inst_preds = instance_dict['inst_preds']
+            inst_labels = instance_dict['inst_labels']
+            inst_logger.log_batch(inst_preds, inst_labels)
 
-        train_loss += loss_value
-        if (batch_idx + 1) % 20 == 0:
-            print('batch {}, loss: {:.4f}, instance_loss: {:.4f}, weighted_loss: {:.4f}, '.format(batch_idx, loss_value, instance_loss_value, total_loss.item()) + 
-                'label: {}, bag_size: {}'.format(label.item(), data.size(0)))
+            train_loss += loss_value
+            successful_batches += 1
+            
+            if (batch_idx + 1) % 20 == 0:
+                print('batch {}, loss: {:.4f}, instance_loss: {:.4f}, weighted_loss: {:.4f}, '.format(batch_idx, loss_value, instance_loss_value, total_loss.item()) + 
+                    'label: {}, bag_size: {}'.format(label.item(), data.size(0)))
 
-        error = calculate_error(Y_hat, label)
-        train_error += error
-        
-        # backward pass
-        total_loss.backward()
-        # step
-        optimizer.step()
-        optimizer.zero_grad()
+            error = calculate_error(Y_hat, label)
+            train_error += error
+            
+            # backward pass
+            total_loss.backward()
+            # step
+            optimizer.step()
+            optimizer.zero_grad()
+            
+        except Exception as e:
+            print(f'Error in batch {batch_idx}: {e}')
+            continue  # Skip this batch and continue training
 
-    # calculate loss and error for epoch
-    train_loss /= len(loader)
-    train_error /= len(loader)
+    # calculate loss and error for epoch (only successful batches)
+    if successful_batches > 0:
+        train_loss /= successful_batches
+        train_error /= successful_batches
+    else:
+        print("Warning: No successful batches in this epoch!")
+        return
     
     if inst_count > 0:
         train_inst_loss /= inst_count

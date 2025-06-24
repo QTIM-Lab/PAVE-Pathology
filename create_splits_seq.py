@@ -12,7 +12,7 @@ parser.add_argument('--seed', type=int, default=1,
                     help='random seed (default: 1)')
 parser.add_argument('--k', type=int, default=10,
                     help='number of splits (default: 10)')
-parser.add_argument('--task', type=str, choices=['task_1_tumor_vs_normal', 'task_2_tumor_subtyping'])
+parser.add_argument('--task', type=str, choices=['task_1_tumor_vs_normal', 'task_2_tumor_subtyping', 'pathology_classifier'])
 parser.add_argument('--val_frac', type=float, default= 0.1,
                     help='fraction of labels for validation (default: 0.1)')
 parser.add_argument('--test_frac', type=float, default= 0.1,
@@ -41,6 +41,16 @@ elif args.task == 'task_2_tumor_subtyping':
                             patient_voting='maj',
                             ignore=[])
 
+elif args.task == 'pathology_classifier':
+    args.n_classes=6
+    dataset = Generic_WSI_Classification_Dataset(csv_path = 'dataset_csv/pathology_features.csv',
+                            shuffle = False, 
+                            seed = args.seed, 
+                            print_info = True,
+                            label_dict = {'insufficient':0, 'normal':1, 'low_grade':2, 'high_grade':3, 'cancer':4, 'atypia':5},
+                            patient_strat=False,
+                            ignore=[])
+
 else:
     raise NotImplementedError
 
@@ -49,15 +59,20 @@ val_num = np.round(num_slides_cls * args.val_frac).astype(int)
 test_num = np.round(num_slides_cls * args.test_frac).astype(int)
 
 if __name__ == '__main__':
+    import shutil
+
     if args.label_frac > 0:
         label_fracs = [args.label_frac]
     else:
         label_fracs = [0.1, 0.25, 0.5, 0.75, 1.0]
     
     for lf in label_fracs:
-        split_dir = 'splits/'+ str(args.task) + '_{}'.format(int(lf * 100))
+        split_dir = 'splits/' + str(args.task) + '_{}'.format(int(lf * 100))
+        # Clear out the split_dir if it exists, then recreate it
+        if os.path.exists(split_dir):
+            shutil.rmtree(split_dir)
         os.makedirs(split_dir, exist_ok=True)
-        dataset.create_splits(k = args.k, val_num = val_num, test_num = test_num, label_frac=lf)
+        dataset.create_splits(k=args.k, val_num=val_num, test_num=test_num, label_frac=lf)
         for i in range(args.k):
             dataset.set_splits()
             descriptor_df = dataset.test_split_gen(return_descriptor=True)

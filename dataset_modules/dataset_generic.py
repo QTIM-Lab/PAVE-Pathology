@@ -336,6 +336,11 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
 		if not self.use_h5:
 			if self.data_dir:
 				full_path = os.path.join(data_dir, 'pt_files', '{}.pt'.format(slide_id))
+				if not os.path.exists(full_path):
+					print(f"Warning: File not found: {full_path}")
+					# Return a zero tensor as fallback or skip this sample
+					# You might want to adjust this based on your needs
+					return torch.zeros(1024), label  # Assuming 1024 features
 				features = torch.load(full_path)
 				return features, label
 			
@@ -344,6 +349,10 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
 
 		else:
 			full_path = os.path.join(data_dir,'h5_files','{}.h5'.format(slide_id))
+			if not os.path.exists(full_path):
+				print(f"Warning: File not found: {full_path}")
+				# Return a zero tensor as fallback
+				return torch.zeros(1024), label, torch.zeros((0, 2))
 			with h5py.File(full_path,'r') as hdf5_file:
 				features = hdf5_file['features'][:]
 				coords = hdf5_file['coords'][:]
