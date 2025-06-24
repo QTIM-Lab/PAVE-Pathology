@@ -51,12 +51,12 @@ def eval(dataset, args, ckpt_path):
     
     print('Init Loaders')
     loader = get_simple_loader(dataset)
-    patient_results, test_error, auc, df, _ = summary(model, loader, dataset, args)
+    patient_results, test_error, auc, df, _ = summary(model, loader, args)
     print('test_error: ', test_error)
     print('auc: ', auc)
     return model, patient_results, test_error, auc, df
 
-def summary(model, loader, dataset, args):
+def summary(model, loader, args):
     acc_logger = Accuracy_Logger(n_classes=args.n_classes)
     model.eval()
     test_loss = 0.
@@ -92,13 +92,11 @@ def summary(model, loader, dataset, args):
 
     # Generate confusion matrix
     cm = confusion_matrix(all_labels, all_preds)
-
-    print('dataset.label_dict:', dataset.label_dict)
     
-    # Get actual class labels from dataset
-    if hasattr(dataset, 'label_dict'):
+    # Get actual class labels from args
+    if hasattr(args, 'label_dict'):
         # Create reverse mapping from numeric to string labels
-        reverse_label_dict = {v: k for k, v in dataset.label_dict.items()}
+        reverse_label_dict = {v: k for k, v in args.label_dict.items()}
         class_labels = [reverse_label_dict.get(i, f'Class {i}') for i in range(args.n_classes)]
     else:
         # Fallback to generic labels if no label_dict available

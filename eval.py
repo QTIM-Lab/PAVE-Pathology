@@ -92,11 +92,12 @@ elif args.task == 'task_2_tumor_subtyping':
 
 elif args.task == 'pathology_classifier':
     args.n_classes=6
+    args.label_dict = {'insufficient':0, 'normal':1, 'low_grade':2, 'high_grade':3, 'cancer':4, 'atypia':5}
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_features.csv',
                             data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
                             shuffle = False, 
                             print_info = True,
-                            label_dict = {'insufficient':0, 'normal':1, 'low_grade':2, 'high_grade':3, 'cancer':4, 'atypia':5},
+                            label_dict = args.label_dict,
                             patient_strat=False,
                             ignore=[])
 
