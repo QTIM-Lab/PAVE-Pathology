@@ -93,14 +93,27 @@ def summary(model, loader, args):
     # Generate confusion matrix
     cm = confusion_matrix(all_labels, all_preds)
     
+    # Get actual class labels from dataset
+    if hasattr(loader.dataset, 'label_dict'):
+        # Create reverse mapping from numeric to string labels
+        reverse_label_dict = {v: k for k, v in loader.dataset.label_dict.items()}
+        class_labels = [reverse_label_dict.get(i, f'Class {i}') for i in range(args.n_classes)]
+    else:
+        # Fallback to generic labels if no label_dict available
+        class_labels = [f'Class {i}' for i in range(args.n_classes)]
+    
     # Create confusion matrix plot
     plt.figure(figsize=(10, 8))
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
-                xticklabels=[f'Class {i}' for i in range(args.n_classes)],
-                yticklabels=[f'Class {i}' for i in range(args.n_classes)])
+                xticklabels=class_labels,
+                yticklabels=class_labels)
     plt.title('Confusion Matrix')
     plt.ylabel('True Label')
     plt.xlabel('Predicted Label')
+    
+    # Rotate x-axis labels if they're long
+    plt.xticks(rotation=45, ha='right')
+    plt.yticks(rotation=0)
     
     # Save confusion matrix plot
     if hasattr(args, 'save_dir'):
@@ -110,8 +123,10 @@ def summary(model, loader, args):
     
     plt.close()
     
-    # Print confusion matrix to console
+    # Print confusion matrix to console with actual labels
     print('\nConfusion Matrix:')
+    print('True labels (rows):', class_labels)
+    print('Predicted labels (columns):', class_labels)
     print(cm)
 
     aucs = []
