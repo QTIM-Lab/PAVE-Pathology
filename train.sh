@@ -18,6 +18,21 @@ module load miniforge
 
 conda activate clam_latest
 
-python create_splits_seq.py --task pathology_classifier --seed 1 --k 1
+python create_splits_seq.py --task pathology_classifier --seed 1 --k 4
 
-CUDA_VISIBLE_DEVICES=0 python main.py --drop_out 0.25 --early_stopping --lr 2e-4 --k 1 --exp_code pathology_classifier --weighted_sample --bag_loss ce --inst_loss svm --task pathology_classifier --model_type clam_mb --log_data --subtyping --data_root_dir /scratch/alpine/$USER/pave_training --embed_dim 1024
+CUDA_VISIBLE_DEVICES=0 python main.py \
+   --task pathology_classifier \
+   --exp_code pathology_classifier \
+   --data_root_dir /scratch/alpine/$USER/pave_training \
+   --model_type clam_mb \
+   --subtyping \
+   --weighted_sample \
+   --early_stopping \
+   --log_data \
+   --k 4 \
+   --drop_out 0.5 \
+   --lr 2e-4 \
+   --reg 2e-4 \
+   --bag_loss ce \
+   --inst_loss svm \
+   --embed_dim 1024 \
