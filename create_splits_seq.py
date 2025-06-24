@@ -42,7 +42,7 @@ elif args.task == 'task_2_tumor_subtyping':
                             ignore=[])
 
 elif args.task == 'pathology_classifier':
-    args.n_classes=5
+    args.n_classes=6
     dataset = Generic_WSI_Classification_Dataset(csv_path = 'dataset_csv/pathology_features.csv',
                             shuffle = False, 
                             seed = args.seed, 

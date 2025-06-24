@@ -178,7 +178,7 @@ elif args.task == 'task_2_tumor_subtyping':
         assert args.subtyping 
 
 elif args.task == 'pathology_classifier':
-    args.n_classes=5
+    args.n_classes=6
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_features.csv',
                             data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
                             shuffle = False, 
