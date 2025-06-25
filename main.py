@@ -177,9 +177,9 @@ elif args.task == 'task_2_tumor_subtyping':
     if args.model_type in ['clam_sb', 'clam_mb']:
         assert args.subtyping 
 
-elif args.task == 'pathology_classifier':
+elif args.task == 'pathology_full_subtyping':
     args.n_classes=6
-    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_features.csv',
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_full_subtyping.csv',
                             data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
                             shuffle = False, 
                             seed = args.seed, 
@@ -190,7 +190,35 @@ elif args.task == 'pathology_classifier':
     # We should be using clam_mb and subtyping
     assert args.model_type == 'clam_mb'
     assert args.subtyping
-        
+
+elif args.task == 'pathology_sufficiency':
+    args.n_classes=2
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_sufficiency.csv',
+                            data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
+                            shuffle = False, 
+                            seed = args.seed, 
+                            print_info = True,
+                            label_dict = {'insufficient':0, 'sufficient':1},
+                            patient_strat=False,
+                            ignore=[])
+    # We should be using clam_sb and not subtyping
+    assert args.model_type == 'clam_sb'
+    assert not args.subtyping
+
+elif args.task == 'pathology_normalcy':
+    args.n_classes=2
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_normalcy.csv',
+                            data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
+                            shuffle = False, 
+                            seed = args.seed, 
+                            print_info = True,
+                            label_dict = {'normal':0, 'abnormal':1},
+                            patient_strat=False,
+                            ignore=[])
+    # We should be using clam_sb and not subtyping
+    assert args.model_type == 'clam_sb'
+    assert not args.subtyping
+
 else:
     raise NotImplementedError
     

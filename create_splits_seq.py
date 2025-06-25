@@ -41,9 +41,9 @@ elif args.task == 'task_2_tumor_subtyping':
                             patient_voting='maj',
                             ignore=[])
 
-elif args.task == 'pathology_classifier':
+elif args.task == 'pathology_full_subtyping':
     args.n_classes=6
-    dataset = Generic_WSI_Classification_Dataset(csv_path = 'dataset_csv/pathology_features.csv',
+    dataset = Generic_WSI_Classification_Dataset(csv_path = 'dataset_csv/pathology_full_subtyping.csv',
                             shuffle = False, 
                             seed = args.seed, 
                             print_info = True,
@@ -51,6 +51,25 @@ elif args.task == 'pathology_classifier':
                             patient_strat=False,
                             ignore=[])
 
+elif args.task == 'pathology_sufficiency':
+    args.n_classes=2
+    dataset = Generic_WSI_Classification_Dataset(csv_path = 'dataset_csv/pathology_sufficiency.csv',
+                            shuffle = False, 
+                            seed = args.seed, 
+                            print_info = True,
+                            label_dict = {'insufficient':0, 'sufficient':1},
+                            patient_strat=False,
+                            ignore=[])
+
+elif args.task == 'pathology_normalcy':
+    args.n_classes=2
+    dataset = Generic_WSI_Classification_Dataset(csv_path = 'dataset_csv/pathology_normalcy.csv',
+                            shuffle = False, 
+                            seed = args.seed, 
+                            print_info = True,
+                            label_dict = {'normal':0, 'abnormal':1},
+                            patient_strat=False,
+                            ignore=[])
 else:
     raise NotImplementedError
 
