@@ -29,9 +29,9 @@ CUDA_VISIBLE_DEVICES=0 python main.py \
    --early_stopping \
    --log_data \
    --k 1 \
-   --drop_out 0.5 \
-   --lr 1e-5 \
-   --reg 2e-4 \
+   --drop_out 0.25 \
+   --lr 1e-4 \
+   --reg 1e-5 \
    --bag_loss ce \
    --inst_loss svm \
    --embed_dim 1024 \
