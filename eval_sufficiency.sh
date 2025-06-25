@@ -1,7 +1,7 @@
 #!/bin/bash
 
 CUDA_VISIBLE_DEVICES=0 python eval.py \
-   --models_exp_code sufficiency_1 \
+   --models_exp_code sufficiency_1_s1 \
    --save_exp_code sufficiency \
    --task pathology_sufficiency \
    --k 1 \
