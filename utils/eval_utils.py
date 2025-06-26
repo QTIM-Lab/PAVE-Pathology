@@ -135,6 +135,22 @@ def summary(model, loader, args):
 
     else: 
         if args.n_classes == 2:
+            fpr, tpr, _ = roc_curve(all_labels, all_probs[:, 1])
+            roc_auc = auc(fpr, tpr)
+            plt.figure()
+            plt.plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve (area = %0.2f)' % roc_auc)
+            plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+            plt.xlim([0.0, 1.0])
+            plt.ylim([0.0, 1.05])
+            plt.xlabel('False Positive Rate')
+            plt.ylabel('True Positive Rate')
+            plt.title('Receiver Operating Characteristic')
+            plt.legend(loc="lower right")
+            if hasattr(args, 'save_dir'):
+                roc_save_path = os.path.join(args.save_dir, 'roc_curve.png')
+                plt.savefig(roc_save_path, dpi=300, bbox_inches='tight')
+                print(f'ROC curve saved to: {roc_save_path}')
+            plt.close()
             auc_score = roc_auc_score(all_labels, all_probs[:, 1])
         else:
             binary_labels = label_binarize(all_labels, classes=[i for i in range(args.n_classes)])
