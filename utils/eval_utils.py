@@ -14,6 +14,7 @@ from sklearn.metrics import roc_auc_score, roc_curve, auc, confusion_matrix
 from sklearn.preprocessing import label_binarize
 import matplotlib.pyplot as plt
 import seaborn as sns
+from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 unused import
 
 def initiate_model(args, ckpt_path, device='cuda'):
     print('Init Model')    
@@ -137,21 +138,29 @@ def summary(model, loader, args):
         if args.n_classes == 2:
             fpr, tpr, thresholds = roc_curve(all_labels, all_probs[:, 1])
             roc_auc = auc(fpr, tpr)
-            fig = plt.figure(figsize=(10, 7))
-            ax = fig.add_subplot(111, projection='3d')
+            plt.figure()
+            plt.plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve (area = %0.2f)' % roc_auc)
+            plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+            plt.xlim([0.0, 1.0])
+            plt.ylim([0.0, 1.05])
+            plt.xlabel('False Positive Rate')
+            plt.ylabel('True Positive Rate')
+            plt.title('Receiver Operating Characteristic')
+            plt.legend(loc="lower right")
 
-            # Plot the ROC curve in 3D
-            ax.plot(fpr, tpr, thresholds, color='blue', lw=2, label='ROC curve')
+            # Annotate every other threshold point (skip the first and last for clarity)
+            for i in range(1, len(fpr)-1, 2):
+                plt.annotate(f'{thresholds[i]:.2f}', 
+                             (fpr[i], tpr[i]), 
+                             textcoords="offset points", 
+                             xytext=(0,10), 
+                             ha='center', fontsize=8, color='blue', rotation=45)
 
-            # Optionally, scatter the points for clarity
-            ax.scatter(fpr, tpr, thresholds, c=thresholds, cmap='viridis', s=30)
-
-            ax.set_xlabel('False Positive Rate')
-            ax.set_ylabel('True Positive Rate')
-            ax.set_zlabel('Threshold')
-            ax.set_title('3D ROC Curve: FPR, TPR, Threshold')
-            ax.legend()
-            plt.show()
+            if hasattr(args, 'save_dir'):
+                roc_save_path = os.path.join(args.save_dir, 'roc_curve.png')
+                plt.savefig(roc_save_path, dpi=300, bbox_inches='tight')
+                print(f'ROC curve saved to: {roc_save_path}')
+            plt.close()
             auc_score = roc_auc_score(all_labels, all_probs[:, 1])
         else:
             binary_labels = label_binarize(all_labels, classes=[i for i in range(args.n_classes)])
