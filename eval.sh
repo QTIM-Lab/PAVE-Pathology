@@ -1,5 +1,9 @@
 #!/bin/bash
 
+module load miniforge
+
+conda activate clam_latest
+
 CUDA_VISIBLE_DEVICES=0 python eval.py \
    --models_exp_code pathology_classifier_s1 \
    --save_exp_code pathology_classifier \
