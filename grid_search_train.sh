@@ -4,9 +4,9 @@
 # Iterates through combinations of lr, weight decay (reg), and dropout values
 
 # Define the hyperparameter values to search over
-LR_VALUES=("1e-5" "5e-5" "1e-4" "1e-3")
-REG_VALUES=("1e-6" "1e-5" "1e-4" "1e-3")
-DROP_OUT_VALUES=("0.1" "0.25" "0.5" "0.75")
+LR_VALUES=("1e-5" "1e-4" "1e-3")
+REG_VALUES=("1e-6" "1e-5" "1e-4")
+DROP_OUT_VALUES=("0.25")
 
 # Counter for experiment codes
 exp_counter=1
