@@ -153,8 +153,8 @@ def summary(model, loader, args):
                 plt.annotate(f'{thresholds[i]:.2f}', 
                              (fpr[i], tpr[i]), 
                              textcoords="offset points", 
-                             xytext=(0,10), 
-                             ha='center', fontsize=8, color='blue', rotation=45)
+                             xytext=(5,5), 
+                             ha='left', fontsize=4, color='blue', rotation=0)
 
             if hasattr(args, 'save_dir'):
                 roc_save_path = os.path.join(args.save_dir, 'roc_curve.png')
