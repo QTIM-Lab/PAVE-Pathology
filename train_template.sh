@@ -75,7 +75,7 @@ done
 # Set defaults for any unset parameters
 TASK=${TASK:-pathology_full_subtyping}
 EXP_CODE=${EXP_CODE:-subtyping_1}
-MODEL_TYPE=${MODEL_TYPE:-clam_sb}
+MODEL_TYPE=${MODEL_TYPE:-clam_mb}
 DATA_ROOT_DIR=${DATA_ROOT_DIR:-/scratch/alpine/$USER/pave_training}
 K=${K:-1}
 DROP_OUT=${DROP_OUT:-0.25}
