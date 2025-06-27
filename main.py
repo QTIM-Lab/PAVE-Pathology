@@ -178,13 +178,13 @@ elif args.task == 'task_2_tumor_subtyping':
         assert args.subtyping 
 
 elif args.task == 'pathology_full_subtyping':
-    args.n_classes=6
+    args.n_classes=5 #6
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_full_subtyping.csv',
                             data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
                             shuffle = False, 
                             seed = args.seed, 
                             print_info = True,
-                            label_dict = {'insufficient':0, 'normal':1, 'low_grade':2, 'high_grade':3, 'cancer':4, 'atypia':5},
+                            label_dict = {'insufficient':0, 'normal':1, 'low_grade':2, 'high_grade':3, 'cancer':4},# 'atypia':5},
                             patient_strat=False,
                             ignore=[])
     # We should be using clam_mb and subtyping
