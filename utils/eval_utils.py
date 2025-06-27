@@ -70,6 +70,7 @@ def summary(model, loader, args):
     slide_ids = loader.dataset.slide_data['slide_id']
     patient_results = {}
     for batch_idx, (data, label) in enumerate(loader):
+        print(f"Batch {batch_idx} of {len(loader)}")
         data, label = data.to(device), label.to(device)
         slide_id = slide_ids.iloc[batch_idx]
         with torch.no_grad():
