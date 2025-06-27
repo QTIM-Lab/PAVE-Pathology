@@ -42,6 +42,7 @@ parser.add_argument('--split', type=str, choices=['train', 'val', 'test', 'all']
 parser.add_argument('--task', type=str, choices=['task_1_tumor_vs_normal',  'task_2_tumor_subtyping', 'pathology_full_subtyping', 'pathology_sufficiency', 'pathology_normalcy'])
 parser.add_argument('--drop_out', type=float, default=0.25, help='dropout')
 parser.add_argument('--embed_dim', type=int, default=1024)
+parser.add_argument('--threshold', type=float, default=None, help='decision threshold for binary classification')
 args = parser.parse_args()
 
 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -63,7 +64,8 @@ settings = {'task': args.task,
             'models_dir': args.models_dir,
             'model_type': args.model_type,
             'drop_out': args.drop_out,
-            'model_size': args.model_size}
+            'model_size': args.model_size,
+            'threshold': args.threshold}
 
 with open(args.save_dir + '/eval_experiment_{}.txt'.format(args.save_exp_code), 'w') as f:
     print(settings, file=f)

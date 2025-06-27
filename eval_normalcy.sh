@@ -8,6 +8,7 @@ CUDA_VISIBLE_DEVICES=0 python eval.py \
    --models_exp_code normalcy_1_s1 \
    --save_exp_code normalcy \
    --task pathology_normalcy \
+   --threshold 0.08 \
    --k 1 \
    --drop_out 0.25 \
    --model_type clam_sb \

@@ -75,6 +75,9 @@ def summary(model, loader, args):
         with torch.no_grad():
             logits, Y_prob, Y_hat, _, results_dict = model(data)
         
+        if args.n_classes == 2 and args.threshold is not None:
+            Y_hat = (Y_prob[:, 1] >= args.threshold).long()
+        
         acc_logger.log(Y_hat, label)
         
         probs = Y_prob.cpu().numpy()
