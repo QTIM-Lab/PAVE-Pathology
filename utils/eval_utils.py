@@ -51,7 +51,7 @@ def eval(dataset, args, ckpt_path):
     model = initiate_model(args, ckpt_path)
     
     print('Init Loaders')
-    loader = get_simple_loader(dataset)
+    loader = get_simple_loader(dataset, num_workers=8)
     patient_results, test_error, auc, df, _ = summary(model, loader, args)
     print('test_error: ', test_error)
     print('auc: ', auc)
@@ -70,7 +70,6 @@ def summary(model, loader, args):
     slide_ids = loader.dataset.slide_data['slide_id']
     patient_results = {}
     for batch_idx, (data, label) in enumerate(loader):
-        print(f"Batch {batch_idx} of {len(loader)}")
         data, label = data.to(device), label.to(device)
         slide_id = slide_ids.iloc[batch_idx]
         with torch.no_grad():
