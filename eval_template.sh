@@ -86,10 +86,6 @@ module load miniforge
 
 conda activate clam_latest
 
-echo "--- Checking GPU Status with nvidia-smi ---"
-nvidia-smi
-echo "------------------------------------------"
-
 echo "Running evaluation with the following parameters:"
 echo "Task: $TASK"
 echo "Models Exp Code: $MODELS_EXP_CODE"
