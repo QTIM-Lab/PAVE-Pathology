@@ -200,7 +200,8 @@ elif args.task == 'pathology_sufficiency':
                             print_info = True,
                             label_dict = {'insufficient':0, 'sufficient':1},
                             patient_strat=False,
-                            ignore=[])
+                            ignore=[],
+                            use_h5=True)
     # We should be using clam_sb and not subtyping
     assert args.model_type == 'clam_sb'
     assert not args.subtyping
@@ -214,7 +215,8 @@ elif args.task == 'pathology_normalcy':
                             print_info = True,
                             label_dict = {'normal':0, 'abnormal':1},
                             patient_strat=False,
-                            ignore=[])
+                            ignore=[],
+                            use_h5=True)
     # We should be using clam_sb and not subtyping
     assert args.model_type == 'clam_sb'
     assert not args.subtyping
