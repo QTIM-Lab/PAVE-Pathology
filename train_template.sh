@@ -61,6 +61,14 @@ while [[ $# -gt 0 ]]; do
       EMBED_DIM="$2"
       shift 2
       ;;
+    --max_epochs)
+      MAX_EPOCHS="$2"
+      shift 2
+      ;;
+    --subtyping)
+      SUBTYPING="True"
+      shift 2
+      ;;
     --additional_args)
       ADDITIONAL_ARGS="$2"
       shift 2
@@ -85,7 +93,8 @@ BAG_LOSS=${BAG_LOSS:-ce}
 INST_LOSS=${INST_LOSS:-svm}
 EMBED_DIM=${EMBED_DIM:-1024}
 MAX_EPOCHS=${MAX_EPOCHS:-100}
-ADDITIONAL_ARGS=${ADDITIONAL_ARGS:-"--subtyping --weighted_sample --early_stopping --log_data"}
+SUBTYPING=${SUBTYPING:-False}
+ADDITIONAL_ARGS=${ADDITIONAL_ARGS:-"--weighted_sample --early_stopping --log_data"}
 
 module load miniforge
 
@@ -106,4 +115,8 @@ CUDA_VISIBLE_DEVICES=0 python main.py \
    --bag_loss $BAG_LOSS \
    --inst_loss $INST_LOSS \
    --embed_dim $EMBED_DIM \
+   --subtyping $SUBTYPING \
    $ADDITIONAL_ARGS
+
+
+
