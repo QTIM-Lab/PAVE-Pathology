@@ -174,7 +174,8 @@ if args.task == 'task_1_tumor_vs_normal':
                             label_dict = {'normal_tissue':0, 'tumor_tissue':1},
                             patient_strat=False,
                             ignore=[],
-                            multi_label=args.multi_label)
+                            #multi_label=args.multi_label
+                            )
 
 elif args.task == 'task_2_tumor_subtyping':
     args.n_classes=3
@@ -186,7 +187,8 @@ elif args.task == 'task_2_tumor_subtyping':
                             label_dict = {'subtype_1':0, 'subtype_2':1, 'subtype_3':2},
                             patient_strat= False,
                             ignore=[],
-                            multi_label=args.multi_label)
+                            #multi_label=args.multi_label
+                            )
 
     if args.model_type in ['clam_sb', 'clam_mb']:
         assert args.subtyping 
@@ -201,7 +203,8 @@ elif args.task == 'pathology_full_subtyping':
                             label_dict = {'insufficient':0, 'normal':1, 'low_grade':2, 'high_grade':3, 'cancer':4},# 'atypia':5},
                             patient_strat=False,
                             ignore=[],
-                            multi_label=args.multi_label)
+                            #multi_label=args.multi_label
+                            )
     # We should be using clam_mb and subtyping
     assert args.model_type == 'clam_mb'
     assert args.subtyping
@@ -216,7 +219,8 @@ elif args.task == 'pathology_sufficiency':
                             label_dict = {'insufficient':0, 'sufficient':1},
                             patient_strat=False,
                             ignore=[],
-                            multi_label=args.multi_label)
+                            #multi_label=args.multi_label
+                            )
     # We should be using clam_sb and not subtyping
     assert args.model_type == 'clam_sb'
     assert not args.subtyping
@@ -232,7 +236,8 @@ elif args.task == 'pathology_normalcy':
                             label_dict = {'normal':0, 'abnormal':1},
                             patient_strat=False,
                             ignore=[],
-                            multi_label=args.multi_label)
+                            #multi_label=args.multi_label
+                            )
     # We should be using clam_sb and not subtyping
     assert args.model_type == 'clam_sb'
     assert not args.subtyping
