@@ -156,7 +156,8 @@ settings = {'num_splits': args.k,
             "use_drop_out": args.drop_out,
             'weighted_sample': args.weighted_sample,
             'opt': args.opt,
-            'use_pos_embed': args.use_pos_embed}
+            'use_pos_embed': args.use_pos_embed,
+            'log_data': args.log_data}
 
 if args.model_type in ['clam_sb', 'clam_mb']:
    settings.update({'bag_weight': args.bag_weight,
@@ -201,8 +202,8 @@ elif args.task == 'pathology_full_subtyping':
                             patient_strat=False,
                             ignore=[])
     # We should be using clam_mb and subtyping
-    assert args.model_type == 'clam_mb'
-    assert args.subtyping
+    args.model_type = 'clam_mb'
+    args.subtyping = True
 
 elif args.task == 'pathology_sufficiency':
     args.n_classes=2
@@ -215,8 +216,9 @@ elif args.task == 'pathology_sufficiency':
                             patient_strat=False,
                             ignore=[],)
     # We should be using clam_sb and not subtyping
-    assert args.model_type == 'clam_sb'
-    assert not args.subtyping
+    args.model_type = 'clam_sb'
+    args.multi_label = False
+    args.subtyping = False
 
 elif args.task == 'pathology_sufficiency_multi_label':
     args.n_classes=6
@@ -229,10 +231,10 @@ elif args.task == 'pathology_sufficiency_multi_label':
                             patient_strat=False,
                             ignore=[],)
     # We should be using clam_mb and multi-label
-    assert args.model_type == 'clam_mb', "Model type must be clam_mb for multi-label classification"
-    assert args.multi_label, "Multi-label must be enabled for multi-label classification"
-    assert not args.subtyping, "Subtyping must be disabled for multi-label classification"
-    assert not args.weighted_sample, "Weighted sampling must be disabled for multi-label classification"
+    args.model_type = 'clam_mb'
+    args.multi_label = True
+    args.subtyping = False
+    args.weighted_sample = False
 
 elif args.task == 'pathology_normalcy':
     args.n_classes=2

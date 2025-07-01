@@ -17,42 +17,37 @@ class Accuracy_Logger(object):
     def __init__(self, n_classes):
         super().__init__()
         self.n_classes = n_classes
-        self.initialize()
-
-    def initialize(self):
-        self.data = [{"count": 0, "correct": 0} for i in range(self.n_classes)]
+        self.data = {i: {"count":0, "correct":0} for i in range(n_classes)}
     
-    def log(self, Y_hat, Y):
-        Y_hat = int(Y_hat)
-        Y = int(Y)
-        self.data[Y]["count"] += 1
-        self.data[Y]["correct"] += (Y_hat == Y)
-    
-    def log_batch(self, Y_hat, Y):
-        Y_hat = Y_hat.cpu().numpy()
-        Y = Y.cpu().numpy()
-
-        if Y.ndim == 1: # In single-label classification, we f
-            Y_hat = Y_hat.flatten()
+    def __call__(self, Y_hat, Y, multi_label=False):
+        if multi_label:
+            Y_hat = (Y_hat > 0.5).float() # Binarize predictions
             for i in range(self.n_classes):
-                mask = (Y == i)
-                self.data[i]["count"] += np.sum(mask)
-                self.data[i]["correct"] += np.sum(Y_hat[mask] == i)
+                # Select predictions and ground truth for the i-th class
+                Y_hat_i = Y_hat[:, i]
+                Y_i = Y[:, i]
+                
+                # Update count and correct predictions for the i-th class
+                self.data[i]["count"] += Y_i.size(0)
+                self.data[i]["correct"] += (Y_hat_i == Y_i).sum().item()
         else:
+            Y_hat = torch.topk(Y_hat, 1, dim = 1)[1]
+            Y_hat = Y_hat.squeeze(dim=1)
+
             for i in range(self.n_classes):
-                self.data[i]["count"] += Y.shape[0]
-                self.data[i]["correct"] += np.equal(Y_hat[:, i], Y[:, i]).sum()
+                self.data[i]["count"] += torch.sum(Y == i)
+                self.data[i]["correct"] += torch.sum((Y_hat == i) * (Y == i))
     
-    def get_summary(self, c):
-        count = self.data[c]["count"] 
-        correct = self.data[c]["correct"]
+    def __str__(self):
+        if self.n_classes == 1:
+            return ""
         
-        if count == 0: 
-            acc = None
-        else:
-            acc = float(correct) / count
-        
-        return acc, correct, count
+        message = "\nAccuracy"
+        for i in range(self.n_classes):
+            acc = self.data[i]["correct"] / self.data[i]["count"] if self.data[i]["count"] > 0 else 0
+            message += " | class {}: {:.4f}".format(i, acc)
+
+        return message
 
 class EarlyStopping:
     """Early stops the training if validation loss doesn't improve after a given patience."""
@@ -231,7 +226,7 @@ def train(datasets, cur, args):
     print('Test error: {:.4f}, ROC AUC: {:.4f}'.format(test_error, test_auc))
 
     for i in range(args.n_classes):
-        acc, correct, count = acc_logger.get_summary(i)
+        acc, correct, count = acc_logger.data[i]
         print('class {}: acc {}, correct {}/{}'.format(i, acc, correct, count))
 
         if writer:
@@ -266,7 +261,7 @@ def train_loop_clam(epoch, model, loader, optimizer, n_classes, bag_weight, writ
             
             logits, Y_prob, Y_hat, _, instance_dict = model(h=data, coords=coords, label=label, instance_eval=True)
             
-            acc_logger.log_batch(Y_hat, label)
+            acc_logger(Y_prob, Y_hat, multi_label=multi_label)
             loss_bag = loss_fn(logits, label)
             loss_value = loss_bag.item()
 
@@ -278,7 +273,7 @@ def train_loop_clam(epoch, model, loader, optimizer, n_classes, bag_weight, writ
                 total_loss = bag_weight * loss_bag + (1-bag_weight) * instance_loss 
                 inst_preds = instance_dict['inst_preds']
                 inst_labels = instance_dict['inst_labels']
-                inst_logger.log_batch(inst_preds, inst_labels)
+                inst_logger(inst_preds, inst_labels, multi_label=multi_label)
             else:
                 total_loss = loss_bag
                 instance_loss_value = 0.0
@@ -315,12 +310,12 @@ def train_loop_clam(epoch, model, loader, optimizer, n_classes, bag_weight, writ
         train_inst_loss /= inst_count
         print('\n')
         for i in range(2):
-            acc, correct, count = inst_logger.get_summary(i)
+            acc, correct, count = inst_logger.data[i]
             print('class {} clustering acc {}: correct {}/{}'.format(i, acc, correct, count))
 
     print('Epoch: {}, train_loss: {:.4f}, train_clustering_loss:  {:.4f}, train_error: {:.4f}'.format(epoch, train_loss, train_inst_loss,  train_error))
     for i in range(n_classes):
-        acc, correct, count = acc_logger.get_summary(i)
+        acc, correct, count = acc_logger.data[i]
         print('class {}: acc {}, correct {}/{}'.format(i, acc, correct, count))
         if writer and acc is not None:
             writer.add_scalar('train/class_{}_acc'.format(i), acc, epoch)
@@ -344,7 +339,7 @@ def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_f
 
         logits, Y_prob, Y_hat, _, _ = model(data)
         
-        acc_logger.log_batch(Y_hat, label)
+        acc_logger(Y_prob, Y_hat, multi_label=multi_label)
         loss = loss_fn(logits, label)
         loss_value = loss.item()
         
@@ -367,7 +362,7 @@ def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_f
 
     print('Epoch: {}, train_loss: {:.4f}, train_error: {:.4f}'.format(epoch, train_loss, train_error))
     for i in range(n_classes):
-        acc, correct, count = acc_logger.get_summary(i)
+        acc, correct, count = acc_logger.data[i]
         print('class {}: acc {}, correct {}/{}'.format(i, acc, correct, count))
         if writer:
             writer.add_scalar('train/class_{}_acc'.format(i), acc, epoch)
@@ -394,7 +389,7 @@ def validate(cur, epoch, model, loader, n_classes, early_stopping = None, writer
 
             logits, Y_prob, Y_hat, _, _ = model(data)
 
-            acc_logger.log_batch(Y_hat, label)
+            acc_logger(Y_prob, Y_hat, multi_label=multi_label)
             
             loss = loss_fn(logits, label)
             
@@ -435,7 +430,7 @@ def validate(cur, epoch, model, loader, n_classes, early_stopping = None, writer
 
     print('\nVal Set, val_loss: {:.4f}, val_error: {:.4f}, auc: {:.4f}'.format(val_loss, val_error, auc))
     for i in range(n_classes):
-        acc, correct, count = acc_logger.get_summary(i)
+        acc, correct, count = acc_logger.data[i]
         print('class {}: acc {}, correct {}/{}'.format(i, acc, correct, count))     
 
     if early_stopping:
@@ -471,7 +466,7 @@ def validate_clam(cur, epoch, model, loader, n_classes, early_stopping = None, w
             with torch.no_grad():
                 logits, Y_prob, Y_hat, _, instance_dict = model(h=data, coords=coords, label=label, instance_eval=True)
 
-            acc_logger.log_batch(Y_hat, label)
+            acc_logger(Y_prob, Y_hat, multi_label=multi_label)
             
             loss_bag = loss_fn(logits, label)
             val_loss += loss_bag.item()
@@ -483,7 +478,7 @@ def validate_clam(cur, epoch, model, loader, n_classes, early_stopping = None, w
                 val_inst_loss += instance_loss_value
                 inst_preds = instance_dict['inst_preds']
                 inst_labels = instance_dict['inst_labels']
-                inst_logger.log_batch(inst_preds, inst_labels)
+                inst_logger(inst_preds, inst_labels, multi_label=multi_label)
             
             error = 1. - Y_hat.eq(label).float().mean().item()
             val_error += error
@@ -519,7 +514,7 @@ def validate_clam(cur, epoch, model, loader, n_classes, early_stopping = None, w
     if inst_count > 0:
         val_inst_loss /= inst_count
         for i in range(2):
-            acc, correct, count = inst_logger.get_summary(i)
+            acc, correct, count = inst_logger.data[i]
             print('class {} clustering acc {}: correct {}/{}'.format(i, acc, correct, count))
     
     if writer:
@@ -530,7 +525,7 @@ def validate_clam(cur, epoch, model, loader, n_classes, early_stopping = None, w
 
 
     for i in range(n_classes):
-        acc, correct, count = acc_logger.get_summary(i)
+        acc, correct, count = acc_logger.data[i]
         print('class {}: acc {}, correct {}/{}'.format(i, acc, correct, count))
         
         if writer and acc is not None:
@@ -571,7 +566,7 @@ def summary(model, loader, n_classes, multi_label=False, model_type='clam_sb'):
             else:
                 logits, Y_prob, Y_hat, _, _ = model(data)
         
-        acc_logger.log_batch(Y_hat, label)
+        acc_logger(Y_prob, Y_hat, multi_label=multi_label)
         
         probs = Y_prob.cpu().numpy()
         all_probs.append(probs)
@@ -583,7 +578,14 @@ def summary(model, loader, n_classes, multi_label=False, model_type='clam_sb'):
     all_labels = np.concatenate(all_labels, axis=0)
     
     if multi_label:
-        auc = roc_auc_score(all_labels, all_probs, average='macro')
+        auc_scores = []
+        for i in range(n_classes):
+            if len(np.unique(all_labels[:, i])) > 1:
+                auc = roc_auc_score(all_labels[:, i], all_probs[:, i])
+                auc_scores.append(auc)
+            else:
+                auc_scores.append(float('nan'))
+        auc = np.nanmean(auc_scores)
         test_error = 1. - np.mean([np.all(all_labels[i] == (all_probs[i] > 0.5)) for i in range(len(all_labels))])
     else:
         if n_classes == 2:
