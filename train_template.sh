@@ -71,7 +71,7 @@ while [[ $# -gt 0 ]]; do
       shift 1
       ;;
     --no_weighted_sample)
-      WEIGHTED_SAMPLE="False"
+      NO_WEIGHTED_SAMPLE="True"
       shift 1
       ;;
     --multi_label)
@@ -107,7 +107,7 @@ INST_LOSS=${INST_LOSS:-svm}
 EMBED_DIM=${EMBED_DIM:-1024}
 MAX_EPOCHS=${MAX_EPOCHS:-100}
 SUBTYPING=${SUBTYPING:-False}
-WEIGHTED_SAMPLE=${WEIGHTED_SAMPLE:-True}
+NO_WEIGHTED_SAMPLE=${NO_WEIGHTED_SAMPLE:-False}
 ADDITIONAL_ARGS=${ADDITIONAL_ARGS:-"--early_stopping --log_data"}
 USE_POS_EMBED=${USE_POS_EMBED:-False}
 MULTI_LABEL=${MULTI_LABEL:-False}
@@ -137,7 +137,7 @@ CUDA_VISIBLE_DEVICES=0 python main.py \
    $( [ "$SUBTYPING" = "True" ] && echo "--subtyping" ) \
    $( [ "$USE_POS_EMBED" = "True" ] && echo "--use_pos_embed" ) \
    $( [ "$MULTI_LABEL" = "True" ] && echo "--multi_label" ) \
-   $( [ "$WEIGHTED_SAMPLE" = "True" ] && echo "--weighted_sample" ) \
+   $( [ "$NO_WEIGHTED_SAMPLE" = "False" ] && echo "--weighted_sample" ) \
    $ADDITIONAL_ARGS
 
 
