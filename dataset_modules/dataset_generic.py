@@ -325,6 +325,7 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
 
 	def load_from_h5(self, toggle):
 		self.use_h5 = toggle
+		print(f"Loading from H5: {toggle}")
 
 	def __getitem__(self, idx):
 		label = self.getlabel(idx)
