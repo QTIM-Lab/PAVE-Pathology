@@ -333,43 +333,64 @@ class Generic_WSI_Classification_Dataset(Dataset):
 		return None
 
 	def test_split_gen(self, return_descriptor=False):
-
-		if return_descriptor:
-			index = [list(self.label_dict.keys())[list(self.label_dict.values()).index(i)] for i in range(self.num_classes)]
-			columns = ['train', 'val', 'test']
-			df = pd.DataFrame(np.full((len(index), len(columns)), 0, dtype=np.int32), index= index,
-							columns= columns)
-
-		count = len(self.train_ids)
-		print('\nnumber of training samples: {}'.format(count))
-		labels = self.getlabel(self.train_ids)
-		unique, counts = np.unique(labels, return_counts=True)
-		for u in range(len(unique)):
-			print('number of samples in cls {}: {}'.format(unique[u], counts[u]))
+		if self.multi_label:
 			if return_descriptor:
-				df.loc[index[u], 'train'] = counts[u]
+				index = self.label_cols
+				columns = ['train', 'val', 'test']
+				df = pd.DataFrame(np.full((len(index), len(columns)), 0, dtype=np.int32), index=index, columns=columns)
+
+			for split_name, ids in zip(['train', 'val', 'test'], [self.train_ids, self.val_ids, self.test_ids]):
+				count = len(ids)
+				print(f'\nnumber of {split_name} samples: {count}')
+				if count == 0:
+					continue
+				
+				labels = self.getlabel(ids)
+				labels = np.array(labels.tolist())
+				label_counts = labels.sum(axis=0)
+
+				for i, count in enumerate(label_counts):
+					print(f'number of samples in cls {i} ({self.label_cols[i]}): {count}')
+					if return_descriptor:
+						df.loc[self.label_cols[i], split_name] = count
+
+		else:
+			if return_descriptor:
+				index = [list(self.label_dict.keys())[list(self.label_dict.values()).index(i)] for i in range(self.num_classes)]
+				columns = ['train', 'val', 'test']
+				df = pd.DataFrame(np.full((len(index), len(columns)), 0, dtype=np.int32), index= index,
+								columns= columns)
+
+			count = len(self.train_ids)
+			print('\nnumber of training samples: {}'.format(count))
+			labels = self.getlabel(self.train_ids)
+			unique, counts = np.unique(labels, return_counts=True)
+			for u in range(len(unique)):
+				print('number of samples in cls {}: {}'.format(unique[u], counts[u]))
+				if return_descriptor:
+					df.loc[index[u], 'train'] = counts[u]
 		
-		count = len(self.val_ids)
-		print('\nnumber of val samples: {}'.format(count))
-		labels = self.getlabel(self.val_ids)
-		unique, counts = np.unique(labels, return_counts=True)
-		for u in range(len(unique)):
-			print('number of samples in cls {}: {}'.format(unique[u], counts[u]))
-			if return_descriptor:
-				df.loc[index[u], 'val'] = counts[u]
+			count = len(self.val_ids)
+			print('\nnumber of val samples: {}'.format(count))
+			labels = self.getlabel(self.val_ids)
+			unique, counts = np.unique(labels, return_counts=True)
+			for u in range(len(unique)):
+				print('number of samples in cls {}: {}'.format(unique[u], counts[u]))
+				if return_descriptor:
+					df.loc[index[u], 'val'] = counts[u]
 
-		count = len(self.test_ids)
-		print('\nnumber of test samples: {}'.format(count))
-		labels = self.getlabel(self.test_ids)
-		unique, counts = np.unique(labels, return_counts=True)
-		for u in range(len(unique)):
-			print('number of samples in cls {}: {}'.format(unique[u], counts[u]))
-			if return_descriptor:
-				df.loc[index[u], 'test'] = counts[u]
+			count = len(self.test_ids)
+			print('\nnumber of test samples: {}'.format(count))
+			labels = self.getlabel(self.test_ids)
+			unique, counts = np.unique(labels, return_counts=True)
+			for u in range(len(unique)):
+				print('number of samples in cls {}: {}'.format(unique[u], counts[u]))
+				if return_descriptor:
+					df.loc[index[u], 'test'] = counts[u]
 
-		assert len(np.intersect1d(self.train_ids, self.test_ids)) == 0
-		assert len(np.intersect1d(self.train_ids, self.val_ids)) == 0
-		assert len(np.intersect1d(self.val_ids, self.test_ids)) == 0
+			assert len(np.intersect1d(self.train_ids, self.test_ids)) == 0
+			assert len(np.intersect1d(self.train_ids, self.val_ids)) == 0
+			assert len(np.intersect1d(self.val_ids, self.test_ids)) == 0
 
 		if return_descriptor:
 			return df
