@@ -69,11 +69,11 @@ def summary(model, loader, args):
 
     slide_ids = loader.dataset.slide_data['slide_id']
     patient_results = {}
-    for batch_idx, (data, label) in enumerate(loader):
-        data, label = data.to(device), label.to(device)
+    for batch_idx, (data, coords, label) in enumerate(loader):
+        data, coords, label = data.to(device), coords.to(device), label.to(device)
         slide_id = slide_ids.iloc[batch_idx]
         with torch.no_grad():
-            logits, Y_prob, Y_hat, _, results_dict = model(data)
+            logits, Y_prob, Y_hat, _, results_dict = model(h=data, coords=coords)
         
         if args.n_classes == 2 and args.threshold is not None:
             Y_hat = (Y_prob[:, 1] >= args.threshold).long()

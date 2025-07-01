@@ -45,6 +45,16 @@ def main(args):
         train_dataset, val_dataset, test_dataset = dataset.return_splits(from_id=False, 
                 csv_path='{}/splits_{}.csv'.format(args.split_dir, i))
         
+        if args.use_pos_embed:
+            print("Positional embedding enabled, switching to H5 files for coordinates.")
+            assert os.path.isdir(os.path.join(args.data_root_dir, 'h5_files')), "H5 files not found, please run feature extraction with H5 format."
+            if train_dataset:
+                train_dataset.load_from_h5(True)
+            if val_dataset:
+                val_dataset.load_from_h5(True)
+            if test_dataset:
+                test_dataset.load_from_h5(True)
+
         datasets = (train_dataset, val_dataset, test_dataset)
         results, test_auc, val_auc, test_acc, val_acc  = train(datasets, i, args)
         all_test_auc.append(test_auc)
@@ -109,6 +119,7 @@ parser.add_argument('--subtyping', action='store_true', default=False,
 parser.add_argument('--bag_weight', type=float, default=0.7,
                     help='clam: weight coefficient for bag-level loss (default: 0.7)')
 parser.add_argument('--B', type=int, default=8, help='numbr of positive/negative patches to sample for clam')
+parser.add_argument('--use_pos_embed', action='store_true', default=False, help='Enable positional embeddings')
 args = parser.parse_args()
 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -143,7 +154,8 @@ settings = {'num_splits': args.k,
             'model_size': args.model_size,
             "use_drop_out": args.drop_out,
             'weighted_sample': args.weighted_sample,
-            'opt': args.opt}
+            'opt': args.opt,
+            'use_pos_embed': args.use_pos_embed}
 
 if args.model_type in ['clam_sb', 'clam_mb']:
    settings.update({'bag_weight': args.bag_weight,
@@ -200,8 +212,7 @@ elif args.task == 'pathology_sufficiency':
                             print_info = True,
                             label_dict = {'insufficient':0, 'sufficient':1},
                             patient_strat=False,
-                            ignore=[],
-                            use_h5=True)
+                            ignore=[],)
     # We should be using clam_sb and not subtyping
     assert args.model_type == 'clam_sb'
     assert not args.subtyping
@@ -215,8 +226,7 @@ elif args.task == 'pathology_normalcy':
                             print_info = True,
                             label_dict = {'normal':0, 'abnormal':1},
                             patient_strat=False,
-                            ignore=[],
-                            use_h5=True)
+                            ignore=[],)
     # We should be using clam_sb and not subtyping
     assert args.model_type == 'clam_sb'
     assert not args.subtyping

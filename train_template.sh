@@ -73,6 +73,10 @@ while [[ $# -gt 0 ]]; do
       ADDITIONAL_ARGS="$2"
       shift 2
       ;;
+    --use_pos_embed)
+      USE_POS_EMBED="True"
+      shift 2
+      ;;
     *)
       echo "Unknown parameter: $1"
       exit 1
@@ -87,14 +91,15 @@ MODEL_TYPE=${MODEL_TYPE:-clam_mb}
 DATA_ROOT_DIR=${DATA_ROOT_DIR:-/scratch/alpine/$USER/pave_training}
 K=${K:-1}
 DROP_OUT=${DROP_OUT:-0.25}
-LR=${LR:-1e-4}
-REG=${REG:-1e-5}
+LR=${LR:-1e-5}
+REG=${REG:-1e-6}
 BAG_LOSS=${BAG_LOSS:-ce}
 INST_LOSS=${INST_LOSS:-svm}
 EMBED_DIM=${EMBED_DIM:-1024}
 MAX_EPOCHS=${MAX_EPOCHS:-100}
 SUBTYPING=${SUBTYPING:-False}
 ADDITIONAL_ARGS=${ADDITIONAL_ARGS:-"--weighted_sample --early_stopping --log_data"}
+USE_POS_EMBED=${USE_POS_EMBED:-False}
 
 module load miniforge
 
@@ -116,7 +121,8 @@ CUDA_VISIBLE_DEVICES=0 python main.py \
    --inst_loss $INST_LOSS \
    --embed_dim $EMBED_DIM \
    --subtyping $SUBTYPING \
+   --use_pos_embed $USE_POS_EMBED \
    $ADDITIONAL_ARGS
 
 
-
+# source train_template.sh --task pathology_sufficiency --exp_code sufficiency_pos --model_type clam_sb --data_root_dir /scratch/alpine/$USER/pave_training --use_pos_embed

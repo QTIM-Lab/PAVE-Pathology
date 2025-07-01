@@ -135,6 +135,8 @@ def train(datasets, cur, args):
         if args.subtyping:
             model_dict.update({'subtyping': True})
         
+        model_dict.update({'use_pos_embed': args.use_pos_embed})
+        
         if args.B > 0:
             model_dict.update({'k_sample': args.B})
         
