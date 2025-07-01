@@ -67,14 +67,14 @@ while [[ $# -gt 0 ]]; do
       ;;
     --subtyping)
       SUBTYPING="True"
-      shift 2
-      ;;
-    --additional_args)
-      ADDITIONAL_ARGS="$2"
-      shift 2
+      shift 1
       ;;
     --use_pos_embed)
       USE_POS_EMBED="True"
+      shift 1
+      ;;
+    --additional_args)
+      ADDITIONAL_ARGS="$2"
       shift 2
       ;;
     *)
@@ -126,3 +126,29 @@ CUDA_VISIBLE_DEVICES=0 python main.py \
 
 
 # source train_template.sh --task pathology_sufficiency --exp_code sufficiency_pos --model_type clam_sb --data_root_dir /scratch/alpine/$USER/pave_training --use_pos_embed
+
+
+# Run interactively:
+
+# CUDA_VISIBLE_DEVICES=0 python main.py --task pathology_sufficiency --exp_code sufficiency_pos --model_type clam_sb --data_root_dir /scratch/alpine/$USER/pave_training --k 1 --drop_out 0.25 --lr 1e-5 --reg 1e-6 --max_epochs 100 --bag_loss ce --inst_loss svm --embed_dim 1024 --use_pos_embed --weighted_sample --early_stopping --log_data
+
+
+# Job for pathology_normalcy, default hyperparameters:
+
+# sbatch train_template.sh --task pathology_normalcy --exp_code normalcy_pos --model_type clam_sb --data_root_dir /scratch/alpine/$USER/pave_training --use_pos_embed --lr 1e-4 --reg 1e-5
+
+
+# Job for pathology_normalcy, tuned hyperparameters:
+
+# sbatch train_template.sh --task pathology_normalcy --exp_code normalcy_pos --model_type clam_sb --data_root_dir /scratch/alpine/$USER/pave_training --use_pos_embed
+
+
+# Job for pathology_sufficiency, tuned hyperparameters:
+
+# sbatch train_template.sh --task pathology_sufficiency --exp_code sufficiency_pos --model_type clam_sb --data_root_dir /scratch/alpine/$USER/pave_training --use_pos_embed
+
+
+# Job for pathology_full_subtyping, tuned hyperparameters:
+
+# sbatch train_template.sh --task pathology_full_subtyping --exp_code full_subtyping_pos --data_root_dir /scratch/alpine/$USER/pave_training --use_pos_embed
+
