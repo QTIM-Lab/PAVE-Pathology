@@ -70,6 +70,10 @@ while [[ $# -gt 0 ]]; do
       SUBTYPING="True"
       shift 1
       ;;
+    --multi_label)
+      MULTI_LABEL="True"
+      shift 1
+      ;;
     --use_pos_embed)
       USE_POS_EMBED="True"
       shift 1
@@ -101,6 +105,7 @@ MAX_EPOCHS=${MAX_EPOCHS:-100}
 SUBTYPING=${SUBTYPING:-False}
 ADDITIONAL_ARGS=${ADDITIONAL_ARGS:-"--weighted_sample --early_stopping --log_data"}
 USE_POS_EMBED=${USE_POS_EMBED:-False}
+MULTI_LABEL=${MULTI_LABEL:-False}
 
 echo "Training task: $TASK, code $EXP_CODE"
 echo "Subtyping: $SUBTYPING, use_pos_embed: $USE_POS_EMBED"
@@ -126,6 +131,7 @@ CUDA_VISIBLE_DEVICES=0 python main.py \
    --embed_dim $EMBED_DIM \
    $( [ "$SUBTYPING" = "True" ] && echo "--subtyping" ) \
    $( [ "$USE_POS_EMBED" = "True" ] && echo "--use_pos_embed" ) \
+   $( [ "$MULTI_LABEL" = "True" ] && echo "--multi_label" ) \
    $ADDITIONAL_ARGS
 
 
@@ -155,3 +161,8 @@ CUDA_VISIBLE_DEVICES=0 python main.py \
 # Job for pathology_full_subtyping, tuned hyperparameters:
 
 # sbatch train_template.sh --task pathology_full_subtyping --exp_code full_subtyping_pos --data_root_dir /scratch/alpine/$USER/pave_training --use_pos_embed
+
+
+# Job for pathology_sufficiency_multi_label, tuned hyperparameters:
+
+# sbatch train_template.sh --task pathology_sufficiency_multi_label --exp_code sufficiency_multi_label_pos --model_type clam_mb --data_root_dir /scratch/alpine/$USER/pave_training --use_pos_embed --multi_label
