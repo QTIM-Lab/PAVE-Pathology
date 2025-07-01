@@ -107,6 +107,7 @@ parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mi
 parser.add_argument('--exp_code', type=str, help='experiment code for saving results')
 parser.add_argument('--weighted_sample', action='store_true', default=False, help='enable weighted sampling')
 parser.add_argument('--model_size', type=str, choices=['small', 'big'], default='small', help='size of model, does not affect mil')
+parser.add_argument('--multi_label', action='store_true', default=False, help='enable multi-label classification')
 parser.add_argument('--task', type=str, choices=['task_1_tumor_vs_normal',  'task_2_tumor_subtyping', "pathology_full_subtyping", "pathology_sufficiency", "pathology_normalcy"])
 ### CLAM specific options
 parser.add_argument('--no_inst_cluster', action='store_true', default=False,
@@ -172,7 +173,8 @@ if args.task == 'task_1_tumor_vs_normal':
                             print_info = True,
                             label_dict = {'normal_tissue':0, 'tumor_tissue':1},
                             patient_strat=False,
-                            ignore=[])
+                            ignore=[],
+                            multi_label=args.multi_label)
 
 elif args.task == 'task_2_tumor_subtyping':
     args.n_classes=3
@@ -183,7 +185,8 @@ elif args.task == 'task_2_tumor_subtyping':
                             print_info = True,
                             label_dict = {'subtype_1':0, 'subtype_2':1, 'subtype_3':2},
                             patient_strat= False,
-                            ignore=[])
+                            ignore=[],
+                            multi_label=args.multi_label)
 
     if args.model_type in ['clam_sb', 'clam_mb']:
         assert args.subtyping 
@@ -197,7 +200,8 @@ elif args.task == 'pathology_full_subtyping':
                             print_info = True,
                             label_dict = {'insufficient':0, 'normal':1, 'low_grade':2, 'high_grade':3, 'cancer':4},# 'atypia':5},
                             patient_strat=False,
-                            ignore=[])
+                            ignore=[],
+                            multi_label=args.multi_label)
     # We should be using clam_mb and subtyping
     assert args.model_type == 'clam_mb'
     assert args.subtyping
@@ -211,12 +215,14 @@ elif args.task == 'pathology_sufficiency':
                             print_info = True,
                             label_dict = {'insufficient':0, 'sufficient':1},
                             patient_strat=False,
-                            ignore=[],)
+                            ignore=[],
+                            multi_label=args.multi_label)
     # We should be using clam_sb and not subtyping
     assert args.model_type == 'clam_sb'
     assert not args.subtyping
 
 elif args.task == 'pathology_normalcy':
+    print(args)
     args.n_classes=2
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_normalcy.csv',
                             data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
@@ -225,7 +231,8 @@ elif args.task == 'pathology_normalcy':
                             print_info = True,
                             label_dict = {'normal':0, 'abnormal':1},
                             patient_strat=False,
-                            ignore=[],)
+                            ignore=[],
+                            multi_label=args.multi_label)
     # We should be using clam_sb and not subtyping
     assert args.model_type == 'clam_sb'
     assert not args.subtyping
