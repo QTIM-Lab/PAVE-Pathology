@@ -123,8 +123,8 @@ CUDA_VISIBLE_DEVICES=0 python main.py \
    --bag_loss $BAG_LOSS \
    --inst_loss $INST_LOSS \
    --embed_dim $EMBED_DIM \
-   --subtyping $SUBTYPING \
-   --use_pos_embed $USE_POS_EMBED \
+   ${SUBTYPING:+--subtyping} \
+   ${USE_POS_EMBED:+--use_pos_embed} \
    $ADDITIONAL_ARGS
 
 
@@ -154,4 +154,3 @@ CUDA_VISIBLE_DEVICES=0 python main.py \
 # Job for pathology_full_subtyping, tuned hyperparameters:
 
 # sbatch train_template.sh --task pathology_full_subtyping --exp_code full_subtyping_pos --data_root_dir /scratch/alpine/$USER/pave_training --use_pos_embed
-
