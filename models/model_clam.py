@@ -160,9 +160,10 @@ class CLAM_SB(nn.Module):
     def forward(self, h, coords=None, label=None, instance_eval=False, return_features=False, attention_only=False):
         
         if self.use_pos_embed and coords is not None:
-            # Add positional embedding
-            pos_embedding = self.pos_embed(coords.float())
-            h = h + pos_embedding
+            # Only add positional embeddings if coords are not all zero
+            if not torch.all(coords == 0):
+                pos_embedding = self.pos_embed(coords.float())
+                h = h + pos_embedding
 
         A, h = self.attention_net(h)  # NxK        
         A = torch.transpose(A, 1, 0)  # KxN
@@ -240,9 +241,10 @@ class CLAM_MB(CLAM_SB):
     def forward(self, h, coords=None, label=None, instance_eval=False, return_features=False, attention_only=False):
         
         if self.use_pos_embed and coords is not None:
-            # Add positional embedding
-            pos_embedding = self.pos_embed(coords.float())
-            h = h + pos_embedding
+            # Only add positional embeddings if coords are not all zero
+            if not torch.all(coords == 0):
+                pos_embedding = self.pos_embed(coords.float())
+                h = h + pos_embedding
 
         A, h = self.attention_net(h)  # NxK
         A = torch.transpose(A, 1, 0)  # KxN
