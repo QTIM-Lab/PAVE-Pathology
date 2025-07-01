@@ -35,7 +35,11 @@ class SubsetSequentialSampler(Sampler):
 def collate_MIL(batch):
 	img = torch.cat([item[0] for item in batch], dim = 0)
 	coords = torch.cat([item[1] for item in batch], dim = 0)
-	label = torch.LongTensor([item[2] for item in batch])
+	
+	if isinstance(batch[0][2], list):
+		label = torch.stack([torch.tensor(item[2]) for item in batch])
+	else:
+		label = torch.LongTensor([item[2] for item in batch])
 	return [img, coords, label]
 
 def collate_features(batch):
