@@ -112,9 +112,7 @@ ADDITIONAL_ARGS=${ADDITIONAL_ARGS:-"--early_stopping --log_data"}
 USE_POS_EMBED=${USE_POS_EMBED:-False}
 MULTI_LABEL=${MULTI_LABEL:-False}
 
-echo "Training task: $TASK, code $EXP_CODE"
-echo "Subtyping: $SUBTYPING, use_pos_embed: $USE_POS_EMBED"
-echo "Multi-label: $MULTI_LABEL, no weighted sample: $NO_WEIGHTED_SAMPLE"
+echo "Training task: $TASK, Code: $EXP_CODE, Subtyping: $SUBTYPING, Use Positional Embedding: $USE_POS_EMBED, Multi-label: $MULTI_LABEL, No Weighted Sample: $NO_WEIGHTED_SAMPLE"
 
 module load miniforge
 
@@ -140,7 +138,7 @@ CUDA_VISIBLE_DEVICES=0 python main.py \
    $( [ "$SUBTYPING" = "True" ] && echo "--subtyping" ) \
    $( [ "$USE_POS_EMBED" = "True" ] && echo "--use_pos_embed" ) \
    $( [ "$MULTI_LABEL" = "True" ] && echo "--multi_label" ) \
-   # $( [ "$NO_WEIGHTED_SAMPLE" != "True" ] && echo "--weighted_sample" ) \
+   $( [ "$NO_WEIGHTED_SAMPLE" = "False" ] && echo "--weighted_sample" ) \
    $ADDITIONAL_ARGS
 
 set +x
