@@ -341,7 +341,6 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
 			with h5py.File(full_path, 'r') as hf:
 				features = hf['features'][:]
 				coords = hf['coords'][:]
-				print(f"Coords shape: {coords.shape}")
 			
 			features = torch.from_numpy(features)
 			coords = torch.from_numpy(coords)
