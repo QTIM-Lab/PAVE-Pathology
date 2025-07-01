@@ -114,6 +114,7 @@ MULTI_LABEL=${MULTI_LABEL:-False}
 
 echo "Training task: $TASK, code $EXP_CODE"
 echo "Subtyping: $SUBTYPING, use_pos_embed: $USE_POS_EMBED"
+echo "Multi-label: $MULTI_LABEL, no weighted sample: $NO_WEIGHTED_SAMPLE"
 
 module load miniforge
 
