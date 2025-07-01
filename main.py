@@ -47,7 +47,6 @@ def main(args):
         
         if args.use_pos_embed:
             print("Positional embedding enabled, switching to H5 files for coordinates.")
-            assert os.path.isdir(os.path.join(args.data_root_dir, 'h5_files')), "H5 files not found, please run feature extraction with H5 format."
             if train_dataset:
                 train_dataset.load_from_h5(True)
             if val_dataset:
