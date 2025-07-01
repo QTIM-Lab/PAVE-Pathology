@@ -120,6 +120,8 @@ module load miniforge
 
 conda activate clam_latest
 
+set -x
+
 python create_splits_seq.py --task $TASK --seed 1 --k $K
 
 CUDA_VISIBLE_DEVICES=0 python main.py \
@@ -140,6 +142,8 @@ CUDA_VISIBLE_DEVICES=0 python main.py \
    $( [ "$MULTI_LABEL" = "True" ] && echo "--multi_label" ) \
    # $( [ "$NO_WEIGHTED_SAMPLE" != "True" ] && echo "--weighted_sample" ) \
    $ADDITIONAL_ARGS
+
+set +x
 
 
 # source train_template.sh --task pathology_sufficiency --exp_code sufficiency_pos --model_type clam_sb --data_root_dir /scratch/alpine/$USER/pave_training --use_pos_embed
