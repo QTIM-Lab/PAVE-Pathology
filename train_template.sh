@@ -124,8 +124,8 @@ CUDA_VISIBLE_DEVICES=0 python main.py \
    --bag_loss $BAG_LOSS \
    --inst_loss $INST_LOSS \
    --embed_dim $EMBED_DIM \
-   ${SUBTYPING:+--subtyping} \
-   ${USE_POS_EMBED:+--use_pos_embed} \
+   $( [ "$SUBTYPING" = "True" ] && echo "--subtyping" ) \
+   $( [ "$USE_POS_EMBED" = "True" ] && echo "--use_pos_embed" ) \
    $ADDITIONAL_ARGS
 
 
