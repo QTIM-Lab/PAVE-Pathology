@@ -103,6 +103,7 @@ ADDITIONAL_ARGS=${ADDITIONAL_ARGS:-"--weighted_sample --early_stopping --log_dat
 USE_POS_EMBED=${USE_POS_EMBED:-False}
 
 echo "Training task: $TASK, code $EXP_CODE"
+echo "Subtyping: $SUBTYPING, use_pos_embed: $USE_POS_EMBED"
 
 module load miniforge
 
