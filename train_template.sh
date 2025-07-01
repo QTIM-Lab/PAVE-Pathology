@@ -138,7 +138,7 @@ CUDA_VISIBLE_DEVICES=0 python main.py \
    $( [ "$SUBTYPING" = "True" ] && echo "--subtyping" ) \
    $( [ "$USE_POS_EMBED" = "True" ] && echo "--use_pos_embed" ) \
    $( [ "$MULTI_LABEL" = "True" ] && echo "--multi_label" ) \
-   $( [ "$NO_WEIGHTED_SAMPLE" != "True" ] && echo "--weighted_sample" ) \
+   # $( [ "$NO_WEIGHTED_SAMPLE" != "True" ] && echo "--weighted_sample" ) \
    $ADDITIONAL_ARGS
 
 
