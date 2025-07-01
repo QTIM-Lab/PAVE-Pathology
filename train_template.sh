@@ -70,6 +70,10 @@ while [[ $# -gt 0 ]]; do
       SUBTYPING="True"
       shift 1
       ;;
+    --no_weighted_sample)
+      WEIGHTED_SAMPLE="False"
+      shift 1
+      ;;
     --multi_label)
       MULTI_LABEL="True"
       shift 1
@@ -103,7 +107,8 @@ INST_LOSS=${INST_LOSS:-svm}
 EMBED_DIM=${EMBED_DIM:-1024}
 MAX_EPOCHS=${MAX_EPOCHS:-100}
 SUBTYPING=${SUBTYPING:-False}
-ADDITIONAL_ARGS=${ADDITIONAL_ARGS:-"--weighted_sample --early_stopping --log_data"}
+WEIGHTED_SAMPLE=${WEIGHTED_SAMPLE:-True}
+ADDITIONAL_ARGS=${ADDITIONAL_ARGS:-"--early_stopping --log_data"}
 USE_POS_EMBED=${USE_POS_EMBED:-False}
 MULTI_LABEL=${MULTI_LABEL:-False}
 
@@ -132,6 +137,7 @@ CUDA_VISIBLE_DEVICES=0 python main.py \
    $( [ "$SUBTYPING" = "True" ] && echo "--subtyping" ) \
    $( [ "$USE_POS_EMBED" = "True" ] && echo "--use_pos_embed" ) \
    $( [ "$MULTI_LABEL" = "True" ] && echo "--multi_label" ) \
+   $( [ "$WEIGHTED_SAMPLE" = "True" ] && echo "--weighted_sample" ) \
    $ADDITIONAL_ARGS
 
 
@@ -165,4 +171,4 @@ CUDA_VISIBLE_DEVICES=0 python main.py \
 
 # Job for pathology_sufficiency_multi_label, tuned hyperparameters:
 
-# sbatch train_template.sh --task pathology_sufficiency_multi_label --exp_code sufficiency_multi_label_pos --model_type clam_mb --data_root_dir /scratch/alpine/$USER/pave_training --use_pos_embed --multi_label
+# sbatch train_template.sh --task pathology_sufficiency_multi_label --exp_code sufficiency_multi_label_pos --model_type clam_mb --data_root_dir /scratch/alpine/$USER/pave_training --use_pos_embed --multi_label --no_weighted_sample
