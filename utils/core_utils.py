@@ -8,6 +8,7 @@ from models.model_clam import CLAM_MB, CLAM_SB
 from sklearn.preprocessing import label_binarize
 from sklearn.metrics import roc_auc_score, roc_curve
 from sklearn.metrics import auc as calc_auc
+import pandas as pd
 
 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -28,12 +29,19 @@ class Accuracy_Logger(object):
         self.data[Y]["correct"] += (Y_hat == Y)
     
     def log_batch(self, Y_hat, Y):
-        Y_hat = np.array(Y_hat).astype(int)
-        Y = np.array(Y).astype(int)
-        for label_class in np.unique(Y):
-            cls_mask = Y == label_class
-            self.data[label_class]["count"] += cls_mask.sum()
-            self.data[label_class]["correct"] += (Y_hat[cls_mask] == Y[cls_mask]).sum()
+        Y_hat = Y_hat.cpu().numpy()
+        Y = Y.cpu().numpy()
+
+        if Y.ndim == 1: # In single-label classification, we f
+            Y_hat = Y_hat.flatten()
+            for i in range(self.n_classes):
+                mask = (Y == i)
+                self.data[i]["count"] += np.sum(mask)
+                self.data[i]["correct"] += np.sum(Y_hat[mask] == i)
+        else:
+            for i in range(self.n_classes):
+                self.data[i]["count"] += Y.shape[0]
+                self.data[i]["correct"] += np.equal(Y_hat[:, i], Y[:, i]).sum()
     
     def get_summary(self, c):
         count = self.data[c]["count"] 
@@ -119,6 +127,8 @@ def train(datasets, cur, args):
         loss_fn = SmoothTop1SVM(n_classes = args.n_classes)
         if device.type == 'cuda':
             loss_fn = loss_fn.cuda()
+    elif args.multi_label:
+        loss_fn = nn.BCEWithLogitsLoss()
     else:
         loss_fn = nn.CrossEntropyLoss()
     print('Done!')
@@ -134,6 +144,9 @@ def train(datasets, cur, args):
     if args.model_type in ['clam_sb', 'clam_mb']:
         if args.subtyping:
             model_dict.update({'subtyping': True})
+        
+        if args.multi_label:
+            model_dict.update({'multi_label': True})
         
         model_dict.update({'use_pos_embed': args.use_pos_embed})
         
@@ -189,14 +202,14 @@ def train(datasets, cur, args):
     
     for epoch in range(args.max_epochs):
         if args.model_type in ['clam_sb', 'clam_mb'] and not args.no_inst_cluster:     
-            train_loop_clam(epoch, model, train_loader, optimizer, args.n_classes, args.bag_weight, writer, loss_fn)
+            train_loop_clam(epoch, model, train_loader, optimizer, args.n_classes, args.bag_weight, writer, loss_fn, args.multi_label)
             stop = validate_clam(cur, epoch, model, val_loader, args.n_classes, 
-                early_stopping, writer, loss_fn, args.results_dir)
+                early_stopping, writer, loss_fn, args.results_dir, args.multi_label)
         
         else:
-            train_loop(epoch, model, train_loader, optimizer, args.n_classes, writer, loss_fn)
+            train_loop(epoch, model, train_loader, optimizer, args.n_classes, writer, loss_fn, args.multi_label)
             stop = validate(cur, epoch, model, val_loader, args.n_classes, 
-                early_stopping, writer, loss_fn, args.results_dir)
+                early_stopping, writer, loss_fn, args.results_dir, args.multi_label)
         
         # Save checkpoint every N epochs (override previous)
         """ if epoch % 10 == 0:  # Every 10 epochs
@@ -211,10 +224,10 @@ def train(datasets, cur, args):
     else:
         torch.save(model.state_dict(), os.path.join(args.results_dir, "s_{}_checkpoint.pt".format(cur)))
 
-    _, val_error, val_auc, _= summary(model, val_loader, args.n_classes)
+    _, val_error, val_auc, _= summary(model, val_loader, args.n_classes, args.multi_label, args.model_type)
     print('Val error: {:.4f}, ROC AUC: {:.4f}'.format(val_error, val_auc))
 
-    results_dict, test_error, test_auc, acc_logger = summary(model, test_loader, args.n_classes)
+    results_dict, test_error, test_auc, acc_logger = summary(model, test_loader, args.n_classes, args.multi_label, args.model_type)
     print('Test error: {:.4f}, ROC AUC: {:.4f}'.format(test_error, test_auc))
 
     for i in range(args.n_classes):
@@ -233,7 +246,7 @@ def train(datasets, cur, args):
     return results_dict, test_auc, val_auc, 1-test_error, 1-val_error 
 
 
-def train_loop_clam(epoch, model, loader, optimizer, n_classes, bag_weight, writer = None, loss_fn = None):
+def train_loop_clam(epoch, model, loader, optimizer, n_classes, bag_weight, writer = None, loss_fn = None, multi_label=False):
     model.train()
     acc_logger = Accuracy_Logger(n_classes=n_classes)
     inst_logger = Accuracy_Logger(n_classes=n_classes)
@@ -248,31 +261,36 @@ def train_loop_clam(epoch, model, loader, optimizer, n_classes, bag_weight, writ
     for batch_idx, (data, coords, label) in enumerate(loader):
         try:
             data, coords, label = data.to(device), coords.to(device), label.to(device)
+            if multi_label:
+                label = label.float()
+            
             logits, Y_prob, Y_hat, _, instance_dict = model(h=data, coords=coords, label=label, instance_eval=True)
             
-            acc_logger.log(Y_hat, label)
+            acc_logger.log_batch(Y_hat, label)
             loss_bag = loss_fn(logits, label)
             loss_value = loss_bag.item()
 
-            instance_loss = instance_dict['instance_loss']
-            inst_count+=1
-            instance_loss_value = instance_loss.item()
-            train_inst_loss += instance_loss_value
-            
-            total_loss = bag_weight * loss_bag + (1-bag_weight) * instance_loss 
-
-            inst_preds = instance_dict['inst_preds']
-            inst_labels = instance_dict['inst_labels']
-            inst_logger.log_batch(inst_preds, inst_labels)
+            if not multi_label:
+                instance_loss = instance_dict['instance_loss']
+                inst_count+=1
+                instance_loss_value = instance_loss.item()
+                train_inst_loss += instance_loss_value
+                total_loss = bag_weight * loss_bag + (1-bag_weight) * instance_loss 
+                inst_preds = instance_dict['inst_preds']
+                inst_labels = instance_dict['inst_labels']
+                inst_logger.log_batch(inst_preds, inst_labels)
+            else:
+                total_loss = loss_bag
+                instance_loss_value = 0.0
 
             train_loss += loss_value
             successful_batches += 1
             
             if (batch_idx + 1) % 20 == 0:
                 print('batch {}, loss: {:.4f}, instance_loss: {:.4f}, weighted_loss: {:.4f}, '.format(batch_idx, loss_value, instance_loss_value, total_loss.item()) + 
-                    'label: {}, bag_size: {}'.format(label.item(), data.size(0)))
+                    'label: {}, bag_size: {}'.format(label.squeeze(0), data.size(0)))
 
-            error = calculate_error(Y_hat, label)
+            error = 1. - Y_hat.eq(label).float().mean().item()
             train_error += error
             
             # backward pass
@@ -312,7 +330,7 @@ def train_loop_clam(epoch, model, loader, optimizer, n_classes, bag_weight, writ
         writer.add_scalar('train/error', train_error, epoch)
         writer.add_scalar('train/clustering_loss', train_inst_loss, epoch)
 
-def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_fn = None):   
+def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_fn = None, multi_label=False):   
     model.train()
     acc_logger = Accuracy_Logger(n_classes=n_classes)
     train_loss = 0.
@@ -321,18 +339,20 @@ def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_f
     print('\n')
     for batch_idx, (data, label) in enumerate(loader):
         data, label = data.to(device), label.to(device)
+        if multi_label:
+            label = label.float()
 
         logits, Y_prob, Y_hat, _, _ = model(data)
         
-        acc_logger.log(Y_hat, label)
+        acc_logger.log_batch(Y_hat, label)
         loss = loss_fn(logits, label)
         loss_value = loss.item()
         
         train_loss += loss_value
         if (batch_idx + 1) % 20 == 0:
-            print('batch {}, loss: {:.4f}, label: {}, bag_size: {}'.format(batch_idx, loss_value, label.item(), data.size(0)))
+            print('batch {}, loss: {:.4f}, label: {}, bag_size: {}'.format(batch_idx, loss_value, label.squeeze(0), data.size(0)))
            
-        error = calculate_error(Y_hat, label)
+        error = 1. - Y_hat.eq(label).float().mean().item()
         train_error += error
         
         # backward pass
@@ -357,42 +377,55 @@ def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_f
         writer.add_scalar('train/error', train_error, epoch)
 
    
-def validate(cur, epoch, model, loader, n_classes, early_stopping = None, writer = None, loss_fn = None, results_dir=None):
+def validate(cur, epoch, model, loader, n_classes, early_stopping = None, writer = None, loss_fn = None, results_dir=None, multi_label=False):
     model.eval()
     acc_logger = Accuracy_Logger(n_classes=n_classes)
-    # loader.dataset.update_mode(True)
     val_loss = 0.
     val_error = 0.
     
-    prob = np.zeros((len(loader), n_classes))
-    labels = np.zeros(len(loader))
+    all_probs = []
+    all_labels = []
 
     with torch.no_grad():
         for batch_idx, (data, label) in enumerate(loader):
             data, label = data.to(device, non_blocking=True), label.to(device, non_blocking=True)
+            if multi_label:
+                label = label.float()
 
             logits, Y_prob, Y_hat, _, _ = model(data)
 
-            acc_logger.log(Y_hat, label)
+            acc_logger.log_batch(Y_hat, label)
             
             loss = loss_fn(logits, label)
-
-            prob[batch_idx] = Y_prob.cpu().numpy()
-            labels[batch_idx] = label.item()
             
             val_loss += loss.item()
-            error = calculate_error(Y_hat, label)
+            error = 1. - Y_hat.eq(label).float().mean().item()
             val_error += error
             
+            all_probs.append(Y_prob.cpu().numpy())
+            all_labels.append(label.cpu().numpy())
 
     val_error /= len(loader)
     val_loss /= len(loader)
 
-    if n_classes == 2:
-        auc = roc_auc_score(labels, prob[:, 1])
-    
+    all_probs = np.concatenate(all_probs, axis=0)
+    all_labels = np.concatenate(all_labels, axis=0)
+
+    if n_classes == 2 and not multi_label:
+        auc = roc_auc_score(all_labels, all_probs[:, 1])
     else:
-        auc = roc_auc_score(labels, prob, multi_class='ovr')
+        if multi_label:
+            auc = roc_auc_score(all_labels, all_probs, average='macro')
+        else:
+            aucs = []
+            binary_labels = label_binarize(all_labels, classes=[i for i in range(n_classes)])
+            for class_idx in range(n_classes):
+                if class_idx in all_labels:
+                    fpr, tpr, _ = roc_curve(binary_labels[:, class_idx], all_probs[:, class_idx])
+                    aucs.append(calc_auc(fpr, tpr))
+                else:
+                    aucs.append(float('nan'))
+            auc = np.nanmean(np.array(aucs))
     
     
     if writer:
@@ -415,7 +448,7 @@ def validate(cur, epoch, model, loader, n_classes, early_stopping = None, writer
 
     return False
 
-def validate_clam(cur, epoch, model, loader, n_classes, early_stopping = None, writer = None, loss_fn = None, results_dir = None):
+def validate_clam(cur, epoch, model, loader, n_classes, early_stopping = None, writer = None, loss_fn = None, results_dir = None, multi_label=False):
     model.eval()
     acc_logger = Accuracy_Logger(n_classes=n_classes)
     inst_logger = Accuracy_Logger(n_classes=n_classes)
@@ -426,55 +459,61 @@ def validate_clam(cur, epoch, model, loader, n_classes, early_stopping = None, w
     val_inst_acc = 0.
     inst_count=0
     
-    prob = np.zeros((len(loader), n_classes))
-    labels = np.zeros(len(loader))
-    sample_size = model.k_sample
+    all_probs = []
+    all_labels = []
+
     with torch.inference_mode():
         for batch_idx, (data, coords, label) in enumerate(loader):
             data, coords, label = data.to(device), coords.to(device), label.to(device)
+            if multi_label:
+                label = label.float()
 
             with torch.no_grad():
                 logits, Y_prob, Y_hat, _, instance_dict = model(h=data, coords=coords, label=label, instance_eval=True)
 
-            acc_logger.log(Y_hat, label)
+            acc_logger.log_batch(Y_hat, label)
             
             loss_bag = loss_fn(logits, label)
-
             val_loss += loss_bag.item()
 
-            instance_loss = instance_dict['instance_loss']
+            if not multi_label:
+                instance_loss = instance_dict['instance_loss']
+                inst_count+=1
+                instance_loss_value = instance_loss.item()
+                val_inst_loss += instance_loss_value
+                inst_preds = instance_dict['inst_preds']
+                inst_labels = instance_dict['inst_labels']
+                inst_logger.log_batch(inst_preds, inst_labels)
             
-            inst_count+=1
-            instance_loss_value = instance_loss.item()
-            val_inst_loss += instance_loss_value
-
-            inst_preds = instance_dict['inst_preds']
-            inst_labels = instance_dict['inst_labels']
-            inst_logger.log_batch(inst_preds, inst_labels)
-
-            prob[batch_idx] = Y_prob.cpu().numpy()
-            labels[batch_idx] = label.item()
-            
-            error = calculate_error(Y_hat, label)
+            error = 1. - Y_hat.eq(label).float().mean().item()
             val_error += error
+
+            all_probs.append(Y_prob.cpu().numpy())
+            all_labels.append(label.cpu().numpy())
 
     val_error /= len(loader)
     val_loss /= len(loader)
 
-    if n_classes == 2:
-        auc = roc_auc_score(labels, prob[:, 1])
+    all_probs = np.concatenate(all_probs, axis=0)
+    all_labels = np.concatenate(all_labels, axis=0)
+
+    if n_classes == 2 and not multi_label:
+        auc = roc_auc_score(all_labels, all_probs[:, 1])
         aucs = []
     else:
-        aucs = []
-        binary_labels = label_binarize(labels, classes=[i for i in range(n_classes)])
-        for class_idx in range(n_classes):
-            if class_idx in labels:
-                fpr, tpr, _ = roc_curve(binary_labels[:, class_idx], prob[:, class_idx])
-                aucs.append(calc_auc(fpr, tpr))
-            else:
-                aucs.append(float('nan'))
+        if multi_label:
+            auc = roc_auc_score(all_labels, all_probs, average='macro')
+        else:
+            aucs = []
+            binary_labels = label_binarize(all_labels, classes=[i for i in range(n_classes)])
+            for class_idx in range(n_classes):
+                if class_idx in all_labels:
+                    fpr, tpr, _ = roc_curve(binary_labels[:, class_idx], all_probs[:, class_idx])
+                    aucs.append(calc_auc(fpr, tpr))
+                else:
+                    aucs.append(float('nan'))
 
-        auc = np.nanmean(np.array(aucs))
+            auc = np.nanmean(np.array(aucs))
 
     print('\nVal Set, val_loss: {:.4f}, val_error: {:.4f}, auc: {:.4f}'.format(val_loss, val_error, auc))
     if inst_count > 0:
@@ -508,46 +547,60 @@ def validate_clam(cur, epoch, model, loader, n_classes, early_stopping = None, w
 
     return False
 
-def summary(model, loader, n_classes):
+def summary(model, loader, n_classes, multi_label=False, model_type='clam_sb'):
     model.eval()
     acc_logger = Accuracy_Logger(n_classes=n_classes)
     patient_results = {}
 
-    all_probs = np.zeros((len(loader), n_classes))
-    all_labels = np.zeros(len(loader))
-    all_preds = np.zeros(len(loader))
-
-    for batch_idx, (data, coords, label) in enumerate(loader):
-        data, coords, label = data.to(device), coords.to(device), label.to(device)
-        slide_id = loader.dataset.slide_data['slide_id'][batch_idx]
-        with torch.no_grad():
-            logits, Y_prob, Y_hat, _, _ = model(h=data, coords=coords)
+    all_probs = []
+    all_labels = []
+    
+    for batch_idx, batch in enumerate(loader):
+        data, label = batch[0], batch[1]
+        data, label = data.to(device), label.to(device)
         
-        acc_logger.log(Y_hat, label)
+        slide_id = loader.dataset.slide_data['slide_id'][batch_idx]
+        
+        if multi_label:
+            label = label.float()
+
+        with torch.no_grad():
+            if 'clam' in model_type:
+                coords = batch[2].to(device)
+                logits, Y_prob, Y_hat, _, _ = model(h=data, coords=coords)
+            else:
+                logits, Y_prob, Y_hat, _, _ = model(data)
+        
+        acc_logger.log_batch(Y_hat, label)
         
         probs = Y_prob.cpu().numpy()
-        all_probs[batch_idx] = probs
-        all_labels[batch_idx] = label.item()
-        all_preds[batch_idx] = Y_hat.item()
+        all_probs.append(probs)
+        all_labels.append(label.cpu().numpy())
         
-        patient_results.update({slide_id: {'slide_id': np.array(slide_id), 'prob': probs, 'label': label.item()}})
+        patient_results.update({slide_id: {'slide_id': np.array(slide_id), 'prob': probs, 'label': label.cpu().numpy()}})
 
-    test_error = 1.0 - np.sum(np.array(all_preds) == np.array(all_labels)) / len(all_labels)
-
-    if n_classes == 2:
-        auc = roc_auc_score(all_labels, all_probs[:, 1])
-        aucs = []
+    all_probs = np.concatenate(all_probs, axis=0)
+    all_labels = np.concatenate(all_labels, axis=0)
+    
+    if multi_label:
+        auc = roc_auc_score(all_labels, all_probs, average='macro')
+        test_error = 1. - np.mean([np.all(all_labels[i] == (all_probs[i] > 0.5)) for i in range(len(all_labels))])
     else:
-        aucs = []
-        binary_labels = label_binarize(all_labels, classes=[i for i in range(n_classes)])
-        for class_idx in range(n_classes):
-            if class_idx in all_labels:
-                fpr, tpr, _ = roc_curve(binary_labels[:, class_idx], all_probs[:, class_idx])
-                aucs.append(calc_auc(fpr, tpr))
-            else:
-                aucs.append(float('nan'))
+        if n_classes == 2:
+            auc = roc_auc_score(all_labels, all_probs[:, 1])
+        else:
+            aucs = []
+            binary_labels = label_binarize(all_labels, classes=[i for i in range(n_classes)])
+            for class_idx in range(n_classes):
+                if class_idx in all_labels:
+                    fpr, tpr, _ = roc_curve(binary_labels[:, class_idx], all_probs[:, class_idx])
+                    aucs.append(calc_auc(fpr, tpr))
+                else:
+                    aucs.append(float('nan'))
+            auc = np.nanmean(np.array(aucs))
 
-        auc = np.nanmean(np.array(aucs))
+        all_preds = np.argmax(all_probs, axis=1)
+        test_error = 1.0 - np.sum(all_preds == all_labels) / len(all_labels)
 
 
     return patient_results, test_error, auc, acc_logger

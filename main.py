@@ -107,8 +107,7 @@ parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mi
 parser.add_argument('--exp_code', type=str, help='experiment code for saving results')
 parser.add_argument('--weighted_sample', action='store_true', default=False, help='enable weighted sampling')
 parser.add_argument('--model_size', type=str, choices=['small', 'big'], default='small', help='size of model, does not affect mil')
-parser.add_argument('--multi_label', action='store_true', default=False, help='enable multi-label classification')
-parser.add_argument('--task', type=str, choices=['task_1_tumor_vs_normal',  'task_2_tumor_subtyping', "pathology_full_subtyping", "pathology_sufficiency", "pathology_normalcy"])
+parser.add_argument('--task', type=str, choices=['task_1_tumor_vs_normal',  'task_2_tumor_subtyping', "pathology_full_subtyping", "pathology_sufficiency", "pathology_normalcy", "pathology_sufficiency_multi_label"])
 ### CLAM specific options
 parser.add_argument('--no_inst_cluster', action='store_true', default=False,
                      help='disable instance-level clustering')
@@ -116,6 +115,8 @@ parser.add_argument('--inst_loss', type=str, choices=['svm', 'ce', None], defaul
                      help='instance-level clustering loss function (default: None)')
 parser.add_argument('--subtyping', action='store_true', default=False, 
                      help='subtyping problem')
+parser.add_argument('--multi_label', action='store_true', default=False, 
+                     help='multi-label problem')
 parser.add_argument('--bag_weight', type=float, default=0.7,
                     help='clam: weight coefficient for bag-level loss (default: 0.7)')
 parser.add_argument('--B', type=int, default=8, help='numbr of positive/negative patches to sample for clam')
@@ -173,9 +174,7 @@ if args.task == 'task_1_tumor_vs_normal':
                             print_info = True,
                             label_dict = {'normal_tissue':0, 'tumor_tissue':1},
                             patient_strat=False,
-                            ignore=[],
-                            #multi_label=args.multi_label
-                            )
+                            ignore=[])
 
 elif args.task == 'task_2_tumor_subtyping':
     args.n_classes=3
@@ -186,9 +185,7 @@ elif args.task == 'task_2_tumor_subtyping':
                             print_info = True,
                             label_dict = {'subtype_1':0, 'subtype_2':1, 'subtype_3':2},
                             patient_strat= False,
-                            ignore=[],
-                            #multi_label=args.multi_label
-                            )
+                            ignore=[])
 
     if args.model_type in ['clam_sb', 'clam_mb']:
         assert args.subtyping 
@@ -202,9 +199,7 @@ elif args.task == 'pathology_full_subtyping':
                             print_info = True,
                             label_dict = {'insufficient':0, 'normal':1, 'low_grade':2, 'high_grade':3, 'cancer':4},# 'atypia':5},
                             patient_strat=False,
-                            ignore=[],
-                            #multi_label=args.multi_label
-                            )
+                            ignore=[])
     # We should be using clam_mb and subtyping
     assert args.model_type == 'clam_mb'
     assert args.subtyping
@@ -218,15 +213,27 @@ elif args.task == 'pathology_sufficiency':
                             print_info = True,
                             label_dict = {'insufficient':0, 'sufficient':1},
                             patient_strat=False,
-                            ignore=[],
-                            #multi_label=args.multi_label
-                            )
+                            ignore=[],)
     # We should be using clam_sb and not subtyping
     assert args.model_type == 'clam_sb'
     assert not args.subtyping
 
+elif args.task == 'pathology_sufficiency_multi_label':
+    args.n_classes=6
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_sufficiency_multi_label.csv',
+                            data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
+                            shuffle = False, 
+                            seed = args.seed, 
+                            print_info = True,
+                            label_cols = ['insufficient', 'scant_material', 'blurry', 'mucus', 'scant_cells', 'inflammation'],
+                            patient_strat=False,
+                            ignore=[],)
+    # We should be using clam_mb and multi-label
+    assert args.model_type == 'clam_mb', "Model type must be clam_mb for multi-label classification"
+    assert args.multi_label, "Multi-label must be enabled for multi-label classification"
+    assert not args.subtyping, "Subtyping must be disabled for multi-label classification"
+
 elif args.task == 'pathology_normalcy':
-    print(args)
     args.n_classes=2
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_normalcy.csv',
                             data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
@@ -235,9 +242,7 @@ elif args.task == 'pathology_normalcy':
                             print_info = True,
                             label_dict = {'normal':0, 'abnormal':1},
                             patient_strat=False,
-                            ignore=[],
-                            #multi_label=args.multi_label
-                            )
+                            ignore=[],)
     # We should be using clam_sb and not subtyping
     assert args.model_type == 'clam_sb'
     assert not args.subtyping
