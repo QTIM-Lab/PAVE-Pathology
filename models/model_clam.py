@@ -15,8 +15,8 @@ class PositionalEmbedding(nn.Module):
 
     def forward(self, coords):
         # Normalize coordinates to be between -1 and 1
-        # Assumes coords are in a [0, max_val] range
-        norm_coords = (coords / (torch.max(coords, dim=0, keepdim=True)[0] + 1e-6)) * 2 - 1
+        # Assumes coords are in a [0, max_val] range and shape [batch_size, 2]
+        norm_coords = (coords / (torch.max(coords, dim=1, keepdim=True)[0] + 1e-6)) * 2 - 1
         pos_embedding = self.embedding_layer(norm_coords)
         return pos_embedding
 
