@@ -15,6 +15,7 @@
 #SBATCH --mail-type=END
 
 # Parse command line arguments
+echo "Parsing command line arguments"
 while [[ $# -gt 0 ]]; do
   case $1 in
     --task)
@@ -100,6 +101,8 @@ MAX_EPOCHS=${MAX_EPOCHS:-100}
 SUBTYPING=${SUBTYPING:-False}
 ADDITIONAL_ARGS=${ADDITIONAL_ARGS:-"--weighted_sample --early_stopping --log_data"}
 USE_POS_EMBED=${USE_POS_EMBED:-False}
+
+echo "Training task: $TASK, code $EXP_CODE"
 
 module load miniforge
 
