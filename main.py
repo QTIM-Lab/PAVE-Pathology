@@ -232,6 +232,7 @@ elif args.task == 'pathology_sufficiency_multi_label':
     assert args.model_type == 'clam_mb', "Model type must be clam_mb for multi-label classification"
     assert args.multi_label, "Multi-label must be enabled for multi-label classification"
     assert not args.subtyping, "Subtyping must be disabled for multi-label classification"
+    assert not args.weighted_sample, "Weighted sampling must be disabled for multi-label classification"
 
 elif args.task == 'pathology_normalcy':
     args.n_classes=2
