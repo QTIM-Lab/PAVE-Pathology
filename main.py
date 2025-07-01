@@ -220,7 +220,7 @@ elif args.task == 'pathology_sufficiency':
 
 elif args.task == 'pathology_sufficiency_multi_label':
     args.n_classes=6
-    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_sufficiency_multi_label.csv',
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_sufficiency.csv',
                             data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
                             shuffle = False, 
                             seed = args.seed, 
