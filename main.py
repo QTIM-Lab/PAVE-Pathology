@@ -107,7 +107,7 @@ parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mi
 parser.add_argument('--exp_code', type=str, help='experiment code for saving results')
 parser.add_argument('--weighted_sample', action='store_true', default=False, help='enable weighted sampling')
 parser.add_argument('--model_size', type=str, choices=['small', 'big'], default='small', help='size of model, does not affect mil')
-parser.add_argument('--task', type=str, choices=['task_1_tumor_vs_normal',  'task_2_tumor_subtyping', "pathology_full_subtyping", "pathology_sufficiency", "pathology_normalcy", "pathology_sufficiency_multi_label"])
+parser.add_argument('--task', type=str, choices=['task_1_tumor_vs_normal',  'task_2_tumor_subtyping', "pathology_full_subtyping", "pathology_sufficiency", "pathology_normalcy"])
 ### CLAM specific options
 parser.add_argument('--no_inst_cluster', action='store_true', default=False,
                      help='disable instance-level clustering')
@@ -115,8 +115,6 @@ parser.add_argument('--inst_loss', type=str, choices=['svm', 'ce', None], defaul
                      help='instance-level clustering loss function (default: None)')
 parser.add_argument('--subtyping', action='store_true', default=False, 
                      help='subtyping problem')
-parser.add_argument('--multi_label', action='store_true', default=False, 
-                     help='multi-label problem')
 parser.add_argument('--bag_weight', type=float, default=0.7,
                     help='clam: weight coefficient for bag-level loss (default: 0.7)')
 parser.add_argument('--B', type=int, default=8, help='numbr of positive/negative patches to sample for clam')
@@ -156,8 +154,7 @@ settings = {'num_splits': args.k,
             "use_drop_out": args.drop_out,
             'weighted_sample': args.weighted_sample,
             'opt': args.opt,
-            'use_pos_embed': args.use_pos_embed,
-            'log_data': args.log_data}
+            'use_pos_embed': args.use_pos_embed}
 
 if args.model_type in ['clam_sb', 'clam_mb']:
    settings.update({'bag_weight': args.bag_weight,
@@ -202,8 +199,8 @@ elif args.task == 'pathology_full_subtyping':
                             patient_strat=False,
                             ignore=[])
     # We should be using clam_mb and subtyping
-    args.model_type = 'clam_mb'
-    args.subtyping = True
+    if args.model_type != 'clam_mb': print(f"Warning: For 'pathology_full_subtyping', model_type should be {args.model_type := 'clam_mb'}. Overriding.")
+    if not args.subtyping: print(f"Warning: For 'pathology_full_subtyping', subtyping should be {args.subtyping := True}. Overriding.")
 
 elif args.task == 'pathology_sufficiency':
     args.n_classes=2
@@ -216,25 +213,8 @@ elif args.task == 'pathology_sufficiency':
                             patient_strat=False,
                             ignore=[],)
     # We should be using clam_sb and not subtyping
-    args.model_type = 'clam_sb'
-    args.multi_label = False
-    args.subtyping = False
-
-elif args.task == 'pathology_sufficiency_multi_label':
-    args.n_classes=6
-    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_sufficiency.csv',
-                            data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
-                            shuffle = False, 
-                            seed = args.seed, 
-                            print_info = True,
-                            label_cols = ['insufficient', 'scant_material', 'blurry', 'mucus', 'scant_cells', 'inflammation'],
-                            patient_strat=False,
-                            ignore=[],)
-    # We should be using clam_mb and multi-label
-    args.model_type = 'clam_mb'
-    args.multi_label = True
-    args.subtyping = False
-    args.weighted_sample = False
+    if args.model_type != 'clam_sb': print(f"Warning: For 'pathology_sufficiency', model_type should be {args.model_type := 'clam_sb'}. Overriding.")
+    if args.subtyping: print(f"Warning: For 'pathology_sufficiency', subtyping should be {args.subtyping := False}. Overriding.")
 
 elif args.task == 'pathology_normalcy':
     args.n_classes=2
@@ -247,8 +227,8 @@ elif args.task == 'pathology_normalcy':
                             patient_strat=False,
                             ignore=[],)
     # We should be using clam_sb and not subtyping
-    assert args.model_type == 'clam_sb'
-    assert not args.subtyping
+    if args.model_type != 'clam_sb': print(f"Warning: For 'pathology_normalcy', model_type should be {args.model_type := 'clam_sb'}. Overriding.")
+    if args.subtyping: print(f"Warning: For 'pathology_normalcy', subtyping should be {args.subtyping := False}. Overriding.")
 
 else:
     raise NotImplementedError

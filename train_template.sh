@@ -6,7 +6,7 @@
 # #SBATCH --mem=128GB
 #SBATCH --gres=gpu:1
 #SBATCH --ntasks=16
-#SBATCH --time=12:00:00
+#SBATCH --time=23:59:00
 #SBATCH --account=amc-general
 #SBATCH --job-name=train_template
 #SBATCH --output="job_logs/train_template_%J.log"
@@ -70,10 +70,6 @@ while [[ $# -gt 0 ]]; do
       SUBTYPING="True"
       shift 1
       ;;
-    --no_weighted_sample)
-      NO_WEIGHTED_SAMPLE="True"
-      shift 1
-      ;;
     --multi_label)
       MULTI_LABEL="True"
       shift 1
@@ -107,12 +103,11 @@ INST_LOSS=${INST_LOSS:-svm}
 EMBED_DIM=${EMBED_DIM:-1024}
 MAX_EPOCHS=${MAX_EPOCHS:-100}
 SUBTYPING=${SUBTYPING:-False}
-NO_WEIGHTED_SAMPLE=${NO_WEIGHTED_SAMPLE:-False}
-ADDITIONAL_ARGS=${ADDITIONAL_ARGS:-"--early_stopping --log_data"}
+ADDITIONAL_ARGS=${ADDITIONAL_ARGS:-"--weighted_sample --early_stopping --log_data"}
 USE_POS_EMBED=${USE_POS_EMBED:-False}
-MULTI_LABEL=${MULTI_LABEL:-False}
 
-echo "Training task: $TASK, Code: $EXP_CODE, Subtyping: $SUBTYPING, Use Positional Embedding: $USE_POS_EMBED, Multi-label: $MULTI_LABEL, No Weighted Sample: $NO_WEIGHTED_SAMPLE"
+echo "Training task: $TASK, code $EXP_CODE"
+echo "Subtyping: $SUBTYPING, use_pos_embed: $USE_POS_EMBED"
 
 module load miniforge
 
@@ -137,8 +132,6 @@ CUDA_VISIBLE_DEVICES=0 python main.py \
    --embed_dim $EMBED_DIM \
    $( [ "$SUBTYPING" = "True" ] && echo "--subtyping" ) \
    $( [ "$USE_POS_EMBED" = "True" ] && echo "--use_pos_embed" ) \
-   $( [ "$MULTI_LABEL" = "True" ] && echo "--multi_label" ) \
-   $( [ "$NO_WEIGHTED_SAMPLE" = "False" ] && echo "--weighted_sample" ) \
    $ADDITIONAL_ARGS
 
 set +x
@@ -174,4 +167,4 @@ set +x
 
 # Job for pathology_sufficiency_multi_label, tuned hyperparameters:
 
-# sbatch train_template.sh --task pathology_sufficiency_multi_label --exp_code sufficiency_multi_label_pos --model_type clam_mb --data_root_dir /scratch/alpine/$USER/pave_training --use_pos_embed --multi_label --no_weighted_sample
+# sbatch train_template.sh --task pathology_sufficiency_multi_label --exp_code sufficiency_multi_label_pos --model_type clam_mb --data_root_dir /scratch/alpine/$USER/pave_training --use_pos_embed --multi_label

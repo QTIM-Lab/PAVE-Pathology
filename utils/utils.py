@@ -35,12 +35,7 @@ class SubsetSequentialSampler(Sampler):
 def collate_MIL(batch):
 	img = torch.cat([item[0] for item in batch], dim = 0)
 	coords = torch.cat([item[1] for item in batch], dim = 0)
-	
-	if isinstance(batch[0][2], torch.FloatTensor):
-		label = torch.stack([item[2] for item in batch])
-	else:
-		label = torch.LongTensor([item[2] for item in batch])
-
+	label = torch.LongTensor([item[2] for item in batch])
 	return [img, coords, label]
 
 def collate_features(batch):
@@ -100,103 +95,43 @@ def print_network(net):
 
 
 def generate_split(cls_ids, val_num, test_num, samples, n_splits = 5,
-	seed = 7, label_frac = 1.0, custom_test_ids = None, multi_label=False):
+	seed = 7, label_frac = 1.0, custom_test_ids = None):
+	indices = np.arange(samples).astype(int)
 	
-	if multi_label:
-		# Greedy stratification for multi-label
-		np.random.seed(seed)
-		indices = np.arange(samples)
+	if custom_test_ids is not None:
+		indices = np.setdiff1d(indices, custom_test_ids)
+
+	np.random.seed(seed)
+	for i in range(n_splits):
+		all_val_ids = []
+		all_test_ids = []
+		sampled_train_ids = []
 		
-		# cls_ids is a list of tuples (pos_indices, neg_indices)
-		num_classes = len(cls_ids)
+		if custom_test_ids is not None: # pre-built test split, do not need to sample
+			all_test_ids.extend(custom_test_ids)
 
-		for i in range(n_splits):
-			val_ids = set()
-			test_ids = set()
+		for c in range(len(val_num)):
+			possible_indices = np.intersect1d(cls_ids[c], indices) #all indices of this class
+			val_ids = np.random.choice(possible_indices, val_num[c], replace = False) # validation ids
+
+			remaining_ids = np.setdiff1d(possible_indices, val_ids) #indices of this class left after validation
+			all_val_ids.extend(val_ids)
+
+			if custom_test_ids is None: # sample test split
+
+				test_ids = np.random.choice(remaining_ids, test_num[c], replace = False)
+				remaining_ids = np.setdiff1d(remaining_ids, test_ids)
+				all_test_ids.extend(test_ids)
+
+			if label_frac == 1:
+				sampled_train_ids.extend(remaining_ids)
 			
-			# Assign validation and testing samples
-			unassigned_indices = set(indices.tolist())
+			else:
+				sample_num  = math.ceil(len(remaining_ids) * label_frac)
+				slice_ids = np.arange(sample_num)
+				sampled_train_ids.extend(remaining_ids[slice_ids])
 
-			# Validation sampling
-			for c in range(num_classes):
-				pos_indices, neg_indices = cls_ids[c]
-				val_pos_num, val_neg_num = val_num[c]
-
-				# Sample positives for validation
-				candidate_pos = list(set(pos_indices) & unassigned_indices)
-				sampled_pos = np.random.choice(candidate_pos, min(len(candidate_pos), val_pos_num), replace=False)
-				val_ids.update(sampled_pos)
-				unassigned_indices.difference_update(sampled_pos)
-
-				# Sample negatives for validation
-				candidate_neg = list(set(neg_indices) & unassigned_indices)
-				sampled_neg = np.random.choice(candidate_neg, min(len(candidate_neg), val_neg_num), replace=False)
-				val_ids.update(sampled_neg)
-				unassigned_indices.difference_update(sampled_neg)
-
-			# Testing sampling
-			for c in range(num_classes):
-				pos_indices, neg_indices = cls_ids[c]
-				test_pos_num, test_neg_num = test_num[c]
-				
-				# Sample positives for testing
-				candidate_pos = list(set(pos_indices) & unassigned_indices)
-				sampled_pos = np.random.choice(candidate_pos, min(len(candidate_pos), test_pos_num), replace=False)
-				test_ids.update(sampled_pos)
-				unassigned_indices.difference_update(sampled_pos)
-
-				# Sample negatives for testing
-				candidate_neg = list(set(neg_indices) & unassigned_indices)
-				sampled_neg = np.random.choice(candidate_neg, min(len(candidate_neg), test_neg_num), replace=False)
-				test_ids.update(sampled_neg)
-				unassigned_indices.difference_update(sampled_neg)
-
-			train_ids = list(unassigned_indices)
-			val_ids = list(val_ids)
-			test_ids = list(test_ids)
-
-			# Note: label_frac is not handled in this multi-label implementation
-			if label_frac < 1.0:
-				print(f"Warning: label_frac={label_frac} is not currently supported for multi-label splitting.")
-
-			yield train_ids, val_ids, test_ids
-	else:
-		indices = np.arange(samples).astype(int)
-		
-		if custom_test_ids is not None:
-			indices = np.setdiff1d(indices, custom_test_ids)
-
-		np.random.seed(seed)
-		for i in range(n_splits):
-			all_val_ids = []
-			all_test_ids = []
-			sampled_train_ids = []
-			
-			if custom_test_ids is not None: # pre-built test split, do not need to sample
-				all_test_ids.extend(custom_test_ids)
-
-			for c in range(len(val_num)):
-				possible_indices = np.intersect1d(cls_ids[c], indices) #all indices of this class
-				val_ids = np.random.choice(possible_indices, val_num[c], replace = False) # validation ids
-
-				remaining_ids = np.setdiff1d(possible_indices, val_ids) #indices of this class left after validation
-				all_val_ids.extend(val_ids)
-
-				if custom_test_ids is None: # sample test split
-
-					test_ids = np.random.choice(remaining_ids, test_num[c], replace = False)
-					remaining_ids = np.setdiff1d(remaining_ids, test_ids)
-					all_test_ids.extend(test_ids)
-
-				if label_frac == 1:
-					sampled_train_ids.extend(remaining_ids)
-				
-				else:
-					sample_num  = math.ceil(len(remaining_ids) * label_frac)
-					slice_ids = np.arange(sample_num)
-					sampled_train_ids.extend(remaining_ids[slice_ids])
-
-			yield sampled_train_ids, all_val_ids, all_test_ids
+		yield sampled_train_ids, all_val_ids, all_test_ids
 
 
 def nth(iterator, n, default=None):
@@ -211,9 +146,6 @@ def calculate_error(Y_hat, Y):
 	return error
 
 def make_weights_for_balanced_classes_split(dataset):
-	if dataset.multi_label:
-		raise NotImplementedError("Weighted sampling is not supported for multi-label classification. Please disable it by removing the --weighted_sample flag.")
-
 	N = float(len(dataset))                                           
 	weight_per_class = [N/len(dataset.slide_cls_ids[c]) for c in range(len(dataset.slide_cls_ids))]                                                                                                     
 	weight = [0] * int(N)                                           

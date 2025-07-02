@@ -211,7 +211,7 @@ class CLAM_SB(nn.Module):
 
 class CLAM_MB(CLAM_SB):
     def __init__(self, gate = True, size_arg = "small", dropout = 0., k_sample=8, n_classes=2,
-        instance_loss_fn=nn.CrossEntropyLoss(), subtyping=False, embed_dim=1024, use_pos_embed=False, multi_label=False):
+        instance_loss_fn=nn.CrossEntropyLoss(), subtyping=False, embed_dim=1024, use_pos_embed=False):
         # No super().__init__ call here for CLAM_MB, as it inherits from CLAM_SB but re-initializes everything
         nn.Module.__init__(self)
         self.size_dict = {"small": [embed_dim, 512, 256], "big": [embed_dim, 512, 384]}
@@ -237,7 +237,6 @@ class CLAM_MB(CLAM_SB):
         self.instance_loss_fn = instance_loss_fn
         self.n_classes = n_classes
         self.subtyping = subtyping
-        self.multi_label = multi_label
 
     def forward(self, h, coords=None, label=None, instance_eval=False, return_features=False, attention_only=False):
         
@@ -255,32 +254,28 @@ class CLAM_MB(CLAM_SB):
         A = F.softmax(A, dim=1)  # softmax over N
 
         if instance_eval:
-            if self.multi_label:
-                # Not supported for multi-label classification
-                results_dict = {}
-            else:
-                total_inst_loss = 0.0
-                all_preds = []
-                all_targets = []
-                inst_labels = F.one_hot(label, num_classes=self.n_classes).squeeze() #binarize label
-                for i in range(len(self.instance_classifiers)):
-                    inst_label = inst_labels[i].item()
-                    classifier = self.instance_classifiers[i]
-                    if inst_label == 1: #in-the-class:
-                        instance_loss, preds, targets = self.inst_eval(A[i], h, classifier)
+            total_inst_loss = 0.0
+            all_preds = []
+            all_targets = []
+            inst_labels = F.one_hot(label, num_classes=self.n_classes).squeeze() #binarize label
+            for i in range(len(self.instance_classifiers)):
+                inst_label = inst_labels[i].item()
+                classifier = self.instance_classifiers[i]
+                if inst_label == 1: #in-the-class:
+                    instance_loss, preds, targets = self.inst_eval(A[i], h, classifier)
+                    all_preds.extend(preds.cpu().numpy())
+                    all_targets.extend(targets.cpu().numpy())
+                else: #out-of-the-class
+                    if self.subtyping:
+                        instance_loss, preds, targets = self.inst_eval_out(A[i], h, classifier)
                         all_preds.extend(preds.cpu().numpy())
                         all_targets.extend(targets.cpu().numpy())
-                    else: #out-of-the-class
-                        if self.subtyping:
-                            instance_loss, preds, targets = self.inst_eval_out(A[i], h, classifier)
-                            all_preds.extend(preds.cpu().numpy())
-                            all_targets.extend(targets.cpu().numpy())
-                        else:
-                            continue
-                    total_inst_loss += instance_loss
+                    else:
+                        continue
+                total_inst_loss += instance_loss
 
-                if self.subtyping:
-                    total_inst_loss /= len(self.instance_classifiers)
+            if self.subtyping:
+                total_inst_loss /= len(self.instance_classifiers)
 
         M = torch.mm(A, h) 
 
@@ -288,19 +283,13 @@ class CLAM_MB(CLAM_SB):
         for c in range(self.n_classes):
             logits[0, c] = self.classifiers[c](M[c])
 
-        if self.multi_label:
-            Y_prob = torch.sigmoid(logits)
-            Y_hat = (Y_prob > 0.5).long()
-        else:
-            Y_hat = torch.topk(logits, 1, dim = 1)[1]
-            Y_prob = F.softmax(logits, dim = 1)
-        
-        if instance_eval and not self.multi_label:
+        Y_hat = torch.topk(logits, 1, dim = 1)[1]
+        Y_prob = F.softmax(logits, dim = 1)
+        if instance_eval:
             results_dict = {'instance_loss': total_inst_loss, 'inst_labels': np.array(all_targets), 
             'inst_preds': np.array(all_preds)}
         else:
             results_dict = {}
-
         if return_features:
             results_dict.update({'features': M})
         return logits, Y_prob, Y_hat, A_raw, results_dict
