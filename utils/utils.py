@@ -146,9 +146,6 @@ def calculate_error(Y_hat, Y):
 	return error
 
 def make_weights_for_balanced_classes_split(dataset):
-	if dataset.multi_label:
-		raise NotImplementedError("Weighted sampling is not supported for multi-label classification. Please disable it by removing the --weighted_sample flag.")
-
 	N = float(len(dataset))                                           
 	weight_per_class = [N/len(dataset.slide_cls_ids[c]) for c in range(len(dataset.slide_cls_ids))]                                                                                                     
 	weight = [0] * int(N)                                           
