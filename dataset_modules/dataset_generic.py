@@ -242,8 +242,7 @@ class Generic_WSI_Classification_Dataset(Dataset):
 					'test_num': test_num,
 					'label_frac': label_frac,
 					'seed': self.seed,
-					'custom_test_ids': custom_test_ids,
-					'multi_label': self.multi_label
+					'custom_test_ids': custom_test_ids
 					}
 
 		if self.patient_strat:
