@@ -109,18 +109,12 @@ class Generic_WSI_Classification_Dataset(Dataset):
 			# store ids corresponding each class at the patient or case level
 			self.patient_cls_ids = [[] for i in range(self.num_classes)]
 			for i in range(self.num_classes):
-				all_labels = np.array([label for label in self.patient_data['label']])
-				positive_cases = np.where(all_labels[:, i] == 1)[0]
-				negative_cases = np.where(all_labels[:, i] == 0)[0]
-				self.patient_cls_ids[i] = (positive_cases, negative_cases)
+				self.patient_cls_ids[i] = np.where([label[i] for label in self.patient_data['label']])[0]
 
 			# store ids corresponding each class at the slide level
 			self.slide_cls_ids = [[] for i in range(self.num_classes)]
 			for i in range(self.num_classes):
-				all_labels = np.array(self.slide_data['label'].tolist())
-				positive_slides = np.where(all_labels[:, i] == 1)[0]
-				negative_slides = np.where(all_labels[:, i] == 0)[0]
-				self.slide_cls_ids[i] = (positive_slides, negative_slides)
+				self.slide_cls_ids[i] = np.where([label[i] for label in self.slide_data['label']])[0]
 		else:
 			# store ids corresponding each class at the patient or case level
 			self.patient_cls_ids = [[] for i in range(self.num_classes)]
@@ -214,26 +208,17 @@ class Generic_WSI_Classification_Dataset(Dataset):
 		if self.multi_label:
 			# For multi-label, count occurrences of each label
 			slide_labels = np.array(self.slide_data['label'].tolist())
-			positive_counts = slide_labels.sum(axis=0)
-			negative_counts = len(slide_labels) - positive_counts
+			label_counts = slide_labels.sum(axis=0)
 			print("slide-level counts:")
-			for i, (p_count, n_count) in enumerate(zip(positive_counts, negative_counts)):
+			for i, count in enumerate(label_counts):
 				label_name = self.label_cols[i]
-				print(f"  {label_name}: {p_count} positive, {n_count} negative")
+				print(f"  {label_name}: {count}")
 		else:
 			print("slide-level counts: ", '\n', self.slide_data['label'].value_counts(sort = False))
 		
 		for i in range(self.num_classes):
-			if self.multi_label:
-				p_patient_count = len(self.patient_cls_ids[i][0])
-				n_patient_count = len(self.patient_cls_ids[i][1])
-				p_slide_count = len(self.slide_cls_ids[i][0])
-				n_slide_count = len(self.slide_cls_ids[i][1])
-				print(f'Patient-LVL; Class {i} ({self.label_cols[i]}): {p_patient_count} positive, {n_patient_count} negative')
-				print(f'Slide-LVL; Class {i} ({self.label_cols[i]}): {p_slide_count} positive, {n_slide_count} negative')
-			else:
-				print('Patient-LVL; Number of samples registered in class %d: %d' % (i, self.patient_cls_ids[i].shape[0]))
-				print('Slide-LVL; Number of samples registered in class %d: %d' % (i, self.slide_cls_ids[i].shape[0]))
+			print('Patient-LVL; Number of samples registered in class %d: %d' % (i, self.patient_cls_ids[i].shape[0]))
+			print('Slide-LVL; Number of samples registered in class %d: %d' % (i, self.slide_cls_ids[i].shape[0]))
 
 	def create_splits(self, k = 3, val_num = (25, 25), test_num = (40, 40), label_frac = 1.0, custom_test_ids = None):
 		settings = {
@@ -351,7 +336,7 @@ class Generic_WSI_Classification_Dataset(Dataset):
 		if self.multi_label:
 			if return_descriptor:
 				index = self.label_cols
-				columns = ['train_pos', 'train_neg', 'val_pos', 'val_neg', 'test_pos', 'test_neg']
+				columns = ['train', 'val', 'test']
 				df = pd.DataFrame(np.full((len(index), len(columns)), 0, dtype=np.int32), index=index, columns=columns)
 
 			for split_name, ids in zip(['train', 'val', 'test'], [self.train_ids, self.val_ids, self.test_ids]):
@@ -362,18 +347,13 @@ class Generic_WSI_Classification_Dataset(Dataset):
 				
 				labels = self.getlabel(ids)
 				labels = np.array(labels.tolist())
-				
-				positive_counts = labels.sum(axis=0)
-				negative_counts = len(labels) - positive_counts
+				label_counts = labels.sum(axis=0)
 
-				for i in range(len(self.label_cols)):
-					label_name = self.label_cols[i]
-					p_count = positive_counts[i]
-					n_count = negative_counts[i]
-					print(f'number of samples in cls {i} ({label_name}): {p_count} positive, {n_count} negative')
+				for i, count in enumerate(label_counts):
+					print(f'number of samples in cls {i} ({self.label_cols[i]}): {count}')
 					if return_descriptor:
-						df.loc[label_name, f'{split_name}_pos'] = p_count
-						df.loc[label_name, f'{split_name}_neg'] = n_count
+						df.loc[self.label_cols[i], split_name] = count
+
 		else:
 			if return_descriptor:
 				index = [list(self.label_dict.keys())[list(self.label_dict.values()).index(i)] for i in range(self.num_classes)]

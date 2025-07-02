@@ -4,7 +4,6 @@ import pandas as pd
 from dataset_modules.dataset_generic import Generic_WSI_Classification_Dataset, Generic_MIL_Dataset, save_splits
 import argparse
 import numpy as np
-import math
 
 parser = argparse.ArgumentParser(description='Creating splits for whole slide classification')
 parser.add_argument('--label_frac', type=float, default= 1.0,
@@ -84,21 +83,9 @@ elif args.task == 'pathology_normalcy':
 else:
     raise NotImplementedError
 
-val_num = math.ceil(len(dataset) * args.val_frac)
-test_num = math.ceil(len(dataset) * args.test_frac)
-
-if dataset.multi_label:
-    val_num = []
-    test_num = []
-    for i in range(dataset.num_classes):
-        pos_count = len(dataset.slide_cls_ids[i][0])
-        neg_count = len(dataset.slide_cls_ids[i][1])
-        val_num.append((math.ceil(pos_count * args.val_frac), math.ceil(neg_count * args.val_frac)))
-        test_num.append((math.ceil(pos_count * args.test_frac), math.ceil(neg_count * args.test_frac)))
-
-elif args.task == 'pathology_full_subtyping':
-    val_num = np.round(len(dataset) * args.val_frac).astype(int)
-    test_num = np.round(len(dataset) * args.test_frac).astype(int)
+num_slides_cls = np.array([len(cls_ids) for cls_ids in dataset.patient_cls_ids])
+val_num = np.round(num_slides_cls * args.val_frac).astype(int)
+test_num = np.round(num_slides_cls * args.test_frac).astype(int)
 
 if __name__ == '__main__':
     import shutil
