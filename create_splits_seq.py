@@ -18,10 +18,6 @@ parser.add_argument('--val_frac', type=float, default= 0.1,
                     help='fraction of labels for validation (default: 0.1)')
 parser.add_argument('--test_frac', type=float, default= 0.1,
                     help='fraction of labels for test (default: 0.1)')
-parser.add_argument('--splits_dir', type=str, default='splits',
-                    help='directory to save splits (default: splits)')
-parser.add_argument('--k_fold', action='store_true',
-                    help='use k-fold cross-validation')
 
 args = parser.parse_args()
 
@@ -88,11 +84,18 @@ elif args.task == 'pathology_normalcy':
 else:
     raise NotImplementedError
 
+val_num = math.ceil(len(dataset) * args.val_frac)
 test_num = math.ceil(len(dataset) * args.test_frac)
 
 if dataset.multi_label:
-    val_num = args.val_frac
-    test_num = args.test_frac
+    val_num = []
+    test_num = []
+    for i in range(dataset.num_classes):
+        pos_count = len(dataset.slide_cls_ids[i][0])
+        neg_count = len(dataset.slide_cls_ids[i][1])
+        val_num.append((math.ceil(pos_count * args.val_frac), math.ceil(neg_count * args.val_frac)))
+        test_num.append((math.ceil(pos_count * args.test_frac), math.ceil(neg_count * args.test_frac)))
+
 elif args.task == 'pathology_full_subtyping':
     val_num = np.round(len(dataset) * args.val_frac).astype(int)
     test_num = np.round(len(dataset) * args.test_frac).astype(int)
@@ -119,25 +122,6 @@ if __name__ == '__main__':
             save_splits(splits, ['train', 'val', 'test'], os.path.join(split_dir, 'splits_{}.csv'.format(i)))
             save_splits(splits, ['train', 'val', 'test'], os.path.join(split_dir, 'splits_{}_bool.csv'.format(i)), boolean_style=True)
             descriptor_df.to_csv(os.path.join(split_dir, 'splits_{}_descriptor.csv'.format(i)))
-
-    if args.k_fold:
-        for i in range(args.k):
-            print(f"Creating fold {i+1}/{args.k}")
-            split_dir = os.path.join(args.splits_dir, f'fold_{i}')
-            os.makedirs(split_dir, exist_ok=True)
-            
-            dataset.create_splits(k=args.k, val_num=val_num, test_num=test_num)
-            splits = dataset.return_splits(from_id=True)
-            save_splits(splits, ['train', 'val', 'test'], os.path.join(split_dir, 'splits_{}.csv'.format(i)))
-    else:
-        dataset.create_splits(k=args.k, val_num=val_num, test_num=test_num, val_frac=args.val_frac, test_frac=args.test_frac)
-        splits = dataset.return_splits(from_id=True)
-        save_splits(splits, ['train', 'val', 'test'], os.path.join(args.splits_dir, 'splits_0.csv'))
-
-    print("Splits created successfully")
-    print(f"Find splits in {args.splits_dir}")
-    
-    descriptor = dataset.test_split_gen(return_descriptor=True)
 
 
 

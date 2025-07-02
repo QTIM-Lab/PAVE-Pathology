@@ -248,12 +248,8 @@ class Generic_WSI_Classification_Dataset(Dataset):
 
 		if self.patient_strat:
 			settings.update({'cls_ids' : self.patient_cls_ids, 'samples': len(self.patient_data['case_id'])})
-			if self.multi_label:
-				settings.update({'labels': self.patient_data['label']})
 		else:
 			settings.update({'cls_ids' : self.slide_cls_ids, 'samples': len(self.slide_data)})
-			if self.multi_label:
-				settings.update({'labels': self.slide_data['label']})
 
 		self.split_gen = generate_split(**settings)
 

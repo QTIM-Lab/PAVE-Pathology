@@ -100,54 +100,66 @@ def print_network(net):
 
 
 def generate_split(cls_ids, val_num, test_num, samples, n_splits = 5,
-	seed = 7, label_frac = 1.0, custom_test_ids = None, multi_label=False, labels=None, val_frac=0.1, test_frac=0.1):
+	seed = 7, label_frac = 1.0, custom_test_ids = None, multi_label=False):
 	
 	if multi_label:
-		from iterstrat.ml_stratifiers import MultilabelStratifiedKFold
+		# Greedy stratification for multi-label
+		np.random.seed(seed)
+		indices = np.arange(samples)
 		
-		# Create a dummy X vector, as the splitter works on data arrays
-		# The labels parameter is expected to be a numpy array of shape (n_samples, n_labels)
-		X = np.arange(len(labels)).reshape(len(labels), 1)
-		y = np.array(labels)
+		# cls_ids is a list of tuples (pos_indices, neg_indices)
+		num_classes = len(cls_ids)
 
-		# Setup the k-fold splitter
-		# n_splits is treated as the number of folds for cross-validation
-		# The split will be train/test, we'll carve out a validation set from the training set
-		mskf = MultilabelStratifiedKFold(n_splits=n_splits, shuffle=True, random_state=seed)
+		for i in range(n_splits):
+			val_ids = set()
+			test_ids = set()
+			
+			# Assign validation and testing samples
+			unassigned_indices = set(indices.tolist())
 
-		# The generator yields train/test indices, we will use these to create train/val/test splits
-		# This is a conceptual change: instead of providing val_num/test_num, we use fractions
-		# of a k-fold split.
-		for train_index, test_index in mskf.split(X, y):
-			
-			# The test set is directly from the fold
-			test_ids = test_index
-			
-			# We need to create a validation set from the training set
-			# We'll use the same stratification logic for this sub-split
-			train_val_labels = y[train_index]
-			X_train_val = np.arange(len(train_val_labels)).reshape(len(train_val_labels), 1)
+			# Validation sampling
+			for c in range(num_classes):
+				pos_indices, neg_indices = cls_ids[c]
+				val_pos_num, val_neg_num = val_num[c]
 
-			# Calculate the split size for validation
-			# This creates a single train/validation split (n_splits=2 is not used for k-fold here)
-			# A bit of a misuse of the tool, but effective. A better way might be train_test_split
-			# Let's adjust to be more robust. We'll split the train set into train/val
-			
-			# new val frac relative to the training set size
-			val_frac_adjusted = val_frac / (1.0 - test_frac)
-			
-			# We'll use a single split to divide the training data into a new training set and a validation set
-			sub_mskf = MultilabelStratifiedKFold(n_splits=int(1/val_frac_adjusted), shuffle=True, random_state=seed)
-			
-			# We only need one split, so we'll break after the first iteration
-			for sub_train_index, val_index in sub_mskf.split(X_train_val, train_val_labels):
-				# The indices returned are relative to the `train_index` array, so we need to map them back
-				val_ids = train_index[val_index]
-				train_ids = train_index[sub_train_index]
-				break
+				# Sample positives for validation
+				candidate_pos = list(set(pos_indices) & unassigned_indices)
+				sampled_pos = np.random.choice(candidate_pos, min(len(candidate_pos), val_pos_num), replace=False)
+				val_ids.update(sampled_pos)
+				unassigned_indices.difference_update(sampled_pos)
 
-			yield list(train_ids), list(val_ids), list(test_ids)
+				# Sample negatives for validation
+				candidate_neg = list(set(neg_indices) & unassigned_indices)
+				sampled_neg = np.random.choice(candidate_neg, min(len(candidate_neg), val_neg_num), replace=False)
+				val_ids.update(sampled_neg)
+				unassigned_indices.difference_update(sampled_neg)
 
+			# Testing sampling
+			for c in range(num_classes):
+				pos_indices, neg_indices = cls_ids[c]
+				test_pos_num, test_neg_num = test_num[c]
+				
+				# Sample positives for testing
+				candidate_pos = list(set(pos_indices) & unassigned_indices)
+				sampled_pos = np.random.choice(candidate_pos, min(len(candidate_pos), test_pos_num), replace=False)
+				test_ids.update(sampled_pos)
+				unassigned_indices.difference_update(sampled_pos)
+
+				# Sample negatives for testing
+				candidate_neg = list(set(neg_indices) & unassigned_indices)
+				sampled_neg = np.random.choice(candidate_neg, min(len(candidate_neg), test_neg_num), replace=False)
+				test_ids.update(sampled_neg)
+				unassigned_indices.difference_update(sampled_neg)
+
+			train_ids = list(unassigned_indices)
+			val_ids = list(val_ids)
+			test_ids = list(test_ids)
+
+			# Note: label_frac is not handled in this multi-label implementation
+			if label_frac < 1.0:
+				print(f"Warning: label_frac={label_frac} is not currently supported for multi-label splitting.")
+
+			yield train_ids, val_ids, test_ids
 	else:
 		indices = np.arange(samples).astype(int)
 		
