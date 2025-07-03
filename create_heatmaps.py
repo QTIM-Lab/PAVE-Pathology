@@ -93,6 +93,8 @@ def parse_config_dict(args, config_dict):
         config_dict['exp_arguments']['save_exp_code'] = args.save_exp_code
     if args.overlap is not None:
         config_dict['patching_arguments']['overlap'] = args.overlap
+    if args.pt_files is not None:
+        config_dict['data_arguments']['data_dir'] = args.pt_files
     return config_dict
 
 if __name__ == '__main__':
