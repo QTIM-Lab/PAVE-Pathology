@@ -113,3 +113,8 @@ python eval.py \
 # source eval_template.sh --task pathology_normalcy --models_exp_code normalcy_1_s1 --save_exp_code normalcy_0.08 --model_type clam_sb --threshold 0.08
 
 # source eval_template.sh --task pathology_normalcy --models_exp_code normalcy_1_s1 --save_exp_code normalcy_0.02 --model_type clam_sb --threshold 0.02
+
+# source eval_template.sh --task pathology_normalcy --models_exp_code normalcy_1_s1 --save_exp_code normalcy_0.01 --model_type clam_sb --threshold 0.01
+
+
+# salloc --partition=atesting_a100 --gres=gpu:1 --time=01:00:00 --ntasks=8

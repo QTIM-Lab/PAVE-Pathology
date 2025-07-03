@@ -199,8 +199,12 @@ elif args.task == 'pathology_full_subtyping':
                             patient_strat=False,
                             ignore=[])
     # We should be using clam_mb and subtyping
-    if args.model_type != 'clam_mb': print(f"Warning: For 'pathology_full_subtyping', model_type should be {args.model_type := 'clam_mb'}. Overriding.")
-    if not args.subtyping: print(f"Warning: For 'pathology_full_subtyping', subtyping should be {args.subtyping := True}. Overriding.")
+    if args.model_type != 'clam_mb':
+        args.model_type = 'clam_mb'
+        print(f"Warning: For 'pathology_full_subtyping', model_type should be {args.model_type}. Overriding.")
+    if not args.subtyping:
+        args.subtyping = True
+        print(f"Warning: For 'pathology_full_subtyping', subtyping should be {args.subtyping}. Overriding.")
 
 elif args.task == 'pathology_sufficiency':
     args.n_classes=2
@@ -213,8 +217,12 @@ elif args.task == 'pathology_sufficiency':
                             patient_strat=False,
                             ignore=[],)
     # We should be using clam_sb and not subtyping
-    if args.model_type != 'clam_sb': print(f"Warning: For 'pathology_sufficiency', model_type should be {args.model_type := 'clam_sb'}. Overriding.")
-    if args.subtyping: print(f"Warning: For 'pathology_sufficiency', subtyping should be {args.subtyping := False}. Overriding.")
+    if args.model_type != 'clam_sb':
+        args.model_type = 'clam_sb'
+        print(f"Warning: For 'pathology_sufficiency', model_type should be {args.model_type}. Overriding.")
+    if args.subtyping:
+        args.subtyping = False
+        print(f"Warning: For 'pathology_sufficiency', subtyping should be {args.subtyping}. Overriding.")
 
 elif args.task == 'pathology_sufficiency_subtyping':
     args.n_classes=3
@@ -227,8 +235,12 @@ elif args.task == 'pathology_sufficiency_subtyping':
                             patient_strat=False,
                             ignore=[],)
     # We should be using clam_mb and subtyping
-    if args.model_type != 'clam_mb': print(f"Warning: For 'pathology_sufficiency_subtyping', model_type should be {args.model_type := 'clam_mb'}. Overriding.")
-    if not args.subtyping: print(f"Warning: For 'pathology_sufficiency_subtyping', subtyping should be {args.subtyping := True}. Overriding.")
+    if args.model_type != 'clam_mb':
+        args.model_type = 'clam_mb'
+        print(f"Warning: For 'pathology_sufficiency_subtyping', model_type should be {args.model_type}. Overriding.")
+    if not args.subtyping:
+        args.subtyping = True
+        print(f"Warning: For 'pathology_sufficiency_subtyping', subtyping should be {args.subtyping}. Overriding.")
 
 elif args.task == 'pathology_normalcy':
     args.n_classes=2
@@ -241,8 +253,12 @@ elif args.task == 'pathology_normalcy':
                             patient_strat=False,
                             ignore=[],)
     # We should be using clam_sb and not subtyping
-    if args.model_type != 'clam_sb': print(f"Warning: For 'pathology_normalcy', model_type should be {args.model_type := 'clam_sb'}. Overriding.")
-    if args.subtyping: print(f"Warning: For 'pathology_normalcy', subtyping should be {args.subtyping := False}. Overriding.")
+    if args.model_type != 'clam_sb':
+        args.model_type = 'clam_sb'
+        print(f"Warning: For 'pathology_normalcy', model_type should be {args.model_type}. Overriding.")
+    if args.subtyping:
+        args.subtyping = False
+        print(f"Warning: For 'pathology_normalcy', subtyping should be {args.subtyping}. Overriding.")
 
 else:
     raise NotImplementedError

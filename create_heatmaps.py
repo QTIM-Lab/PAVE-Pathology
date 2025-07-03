@@ -29,10 +29,25 @@ parser.add_argument('--save_exp_code', type=str, default=None,
                     help='experiment code')
 parser.add_argument('--overlap', type=float, default=None)
 parser.add_argument('--config_file', type=str, default="heatmap_config_template.yaml")
+parser.add_argument('--pt_files', type=str, default=None, help='Path to directory containing .pt feature files')
+parser.add_argument('--enable_feat_ext', action='store_true', help='Enable feature extraction if features do not exist')
 args = parser.parse_args()
 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def infer_single_slide(model, features, label, reverse_label_dict, k=1):
+    """
+    Infer the class label for a single slide.
+    
+    Args:
+        model: The model to use for inference.
+        features: The features to use for inference.
+        label: The true label of the slide.
+        reverse_label_dict: A dictionary mapping class labels to their integer values.
+        k: The number of top predictions to return.
+        
+    Returns:
+    """
+    
     features = features.to(device)
     with torch.inference_mode():
         if isinstance(model, (CLAM_SB, CLAM_MB)):
@@ -184,6 +199,19 @@ if __name__ == '__main__':
     blocky_wsi_kwargs = {'top_left': None, 'bot_right': None, 'patch_size': patch_size, 'step_size': patch_size, 
     'custom_downsample':patch_args.custom_downsample, 'level': patch_args.patch_level, 'use_center_shift': heatmap_args.use_center_shift}
 
+    # If pt_files path is provided, get a set of all .pt files in that directory for quick lookup
+    pt_files_dir = None
+    pt_files_set = set()
+    enable_feat_ext = False
+    if hasattr(args, 'pt_files') and args.pt_files is not None:
+        pt_files_dir = args.pt_files
+        if os.path.isdir(pt_files_dir):
+            pt_files_set = set(os.listdir(pt_files_dir))
+        else:
+            print(f"Warning: pt_files directory {pt_files_dir} does not exist.")
+    if hasattr(args, 'enable_feat_ext'):
+        enable_feat_ext = args.enable_feat_ext
+
     for i in tqdm(range(len(process_stack))):
         slide_name = process_stack.loc[i, 'slide_id']
         if data_args.slide_ext not in slide_name:
@@ -279,24 +307,36 @@ if __name__ == '__main__':
         
         features_path = os.path.join(r_slide_save_dir, slide_id+'.pt')
         h5_path = os.path.join(r_slide_save_dir, slide_id+'.h5')
-    
 
-        ##### check if h5_features_file exists ######
-        if not os.path.isfile(h5_path) :
-            _, _, wsi_object = compute_from_patches(wsi_object=wsi_object, 
-                                            model=model, 
-                                            feature_extractor=feature_extractor, 
-                                            img_transforms=img_transforms,
-                                            batch_size=exp_args.batch_size, **blocky_wsi_kwargs, 
-                                            attn_save_path=None, feat_save_path=h5_path, 
-                                            ref_scores=None)				
-        
-        ##### check if pt_features_file exists ######
-        if not os.path.isfile(features_path):
-            file = h5py.File(h5_path, "r")
-            features = torch.tensor(file['features'][:])
-            torch.save(features, features_path)
-            file.close()
+        # If pt_files_dir is provided, check for .pt file there first
+        pt_file_found = False
+        if pt_files_dir is not None:
+            pt_file_name = slide_id + '.pt'
+            pt_file_path = os.path.join(pt_files_dir, pt_file_name)
+            if pt_file_name in pt_files_set and os.path.isfile(pt_file_path):
+                features_path = pt_file_path
+                pt_file_found = True
+
+        # Only do feature extraction if enable_feat_ext is True
+        if not pt_file_found and not os.path.isfile(features_path):
+            if enable_feat_ext:
+                # If .h5 does not exist, compute features and save .h5
+                if not os.path.isfile(h5_path):
+                    _, _, wsi_object = compute_from_patches(wsi_object=wsi_object, 
+                                                    model=model, 
+                                                    feature_extractor=feature_extractor, 
+                                                    img_transforms=img_transforms,
+                                                    batch_size=exp_args.batch_size, **blocky_wsi_kwargs, 
+                                                    attn_save_path=None, feat_save_path=h5_path, 
+                                                    ref_scores=None)				
+                # Save .pt from .h5
+                file = h5py.File(h5_path, "r")
+                features = torch.tensor(file['features'][:])
+                torch.save(features, features_path)
+                file.close()
+            else:
+                print(f"Feature file {features_path} not found and feature extraction is disabled. Skipping slide {slide_id}.")
+                continue
 
         # load features 
         features = torch.load(features_path)
@@ -403,7 +443,7 @@ if __name__ == '__main__':
         if os.path.isfile(os.path.join(p_slide_save_dir, heatmap_save_name)):
             pass
         
-        else:                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
+        else:
             heatmap = drawHeatmap(scores, coords, slide_path, wsi_object=wsi_object,  
                                   cmap=heatmap_args.cmap, alpha=heatmap_args.alpha, **heatmap_vis_args, 
                                   binarize=heatmap_args.binarize, 
@@ -433,5 +473,3 @@ if __name__ == '__main__':
 
     with open(os.path.join(exp_args.raw_save_dir, exp_args.save_exp_code, 'config.yaml'), 'w') as outfile:
         yaml.dump(config_dict, outfile, default_flow_style=False)
-
-
