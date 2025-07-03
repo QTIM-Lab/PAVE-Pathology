@@ -107,14 +107,6 @@ if __name__ == '__main__':
                 print (value_key + " : " + str(value_value))
         else:
             print ('\n'+key + " : " + str(value))
-            
-    decision = input('Continue? Y/N ')
-    if decision in ['Y', 'y', 'Yes', 'yes']:
-        pass
-    elif decision in ['N', 'n', 'No', 'NO']:
-        exit()
-    else:
-        raise NotImplementedError
 
     args = config_dict
     patch_args = argparse.Namespace(**args['patching_arguments'])
@@ -183,9 +175,17 @@ if __name__ == '__main__':
     else:
         raise NotImplementedError
 
-    feature_extractor, img_transforms = get_encoder(encoder_args.model_name, target_img_size=encoder_args.target_img_size)
-    _ = feature_extractor.eval()
-    feature_extractor = feature_extractor.to(device)
+    enable_feat_ext = False
+    if hasattr(args, 'enable_feat_ext'):
+        enable_feat_ext = args.enable_feat_ext
+
+    feature_extractor = None
+    img_transforms = None
+    if enable_feat_ext:
+        feature_extractor, img_transforms = get_encoder(encoder_args.model_name, target_img_size=encoder_args.target_img_size)
+        _ = feature_extractor.eval()
+        feature_extractor = feature_extractor.to(device)
+    
     print('Done!')
 
     label_dict =  data_args.label_dict
@@ -202,15 +202,12 @@ if __name__ == '__main__':
     # If pt_files path is provided, get a set of all .pt files in that directory for quick lookup
     pt_files_dir = None
     pt_files_set = set()
-    enable_feat_ext = False
     if hasattr(args, 'pt_files') and args.pt_files is not None:
         pt_files_dir = args.pt_files
         if os.path.isdir(pt_files_dir):
             pt_files_set = set(os.listdir(pt_files_dir))
         else:
             print(f"Warning: pt_files directory {pt_files_dir} does not exist.")
-    if hasattr(args, 'enable_feat_ext'):
-        enable_feat_ext = args.enable_feat_ext
 
     for i in tqdm(range(len(process_stack))):
         slide_name = process_stack.loc[i, 'slide_id']
