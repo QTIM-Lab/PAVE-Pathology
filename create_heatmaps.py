@@ -95,14 +95,6 @@ if __name__ == '__main__':
                 print (value_key + " : " + str(value_value))
         else:
             print ('\n'+key + " : " + str(value))
-            
-    decision = input('Continue? Y/N ')
-    if decision in ['Y', 'y', 'Yes', 'yes']:
-        pass
-    elif decision in ['N', 'n', 'No', 'NO']:
-        exit()
-    else:
-        raise NotImplementedError
     
     enable_feat_ext = args.enable_feat_ext
     h5_files_dir = args.h5_files_dir
@@ -295,7 +287,7 @@ if __name__ == '__main__':
         if not os.path.isfile(h5_path):
             source_h5_path = None
             if h5_files_dir:
-                source_h5_path = os.path.join(args.h5_files_dir, slide_id + '.h5')
+                source_h5_path = os.path.join(h5_files_dir, slide_id + '.h5')
 
             if source_h5_path and os.path.isfile(source_h5_path):
                 print(f"Found features in central repo: {source_h5_path}. Copying...")
