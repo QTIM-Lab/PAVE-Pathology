@@ -23,13 +23,14 @@ from vis_utils.heatmap_utils import initialize_wsi, drawHeatmap, compute_from_pa
 from wsi_core.wsi_utils import sample_rois
 from utils.file_utils import save_hdf5
 from tqdm import tqdm
+import shutil
 
 parser = argparse.ArgumentParser(description='Heatmap inference script')
 parser.add_argument('--save_exp_code', type=str, default=None,
                     help='experiment code')
 parser.add_argument('--overlap', type=float, default=None)
 parser.add_argument('--config_file', type=str, default="heatmap_config_template.yaml")
-parser.add_argument('--pt_files', type=str, default=None, help='Path to directory containing .pt feature files')
+parser.add_argument('--h5_files_dir', type=str, default=None, help='Path to directory containing .h5 feature files')
 parser.add_argument('--enable_feat_ext', action='store_true', help='Enable feature extraction if features do not exist')
 args = parser.parse_args()
 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -113,9 +114,9 @@ if __name__ == '__main__':
     if hasattr(args, 'enable_feat_ext'):
         enable_feat_ext = args.enable_feat_ext
 
-    pt_files_dir = None
-    if hasattr(args, 'pt_files'):
-        pt_files_dir = args.pt_files
+    h5_files_dir = None
+    if hasattr(args, 'h5_files_dir'):
+        h5_files_dir = args.h5_files_dir
 
     args = config_dict
     patch_args = argparse.Namespace(**args['patching_arguments'])
@@ -203,15 +204,6 @@ if __name__ == '__main__':
     os.makedirs(exp_args.raw_save_dir, exist_ok=True)
     blocky_wsi_kwargs = {'top_left': None, 'bot_right': None, 'patch_size': patch_size, 'step_size': patch_size, 
     'custom_downsample':patch_args.custom_downsample, 'level': patch_args.patch_level, 'use_center_shift': heatmap_args.use_center_shift}
-
-    # If pt_files path is provided, get a set of all .pt files in that directory for quick lookup
-    pt_files_set = set()
-    if pt_files_dir:
-        if os.path.isdir(pt_files_dir):
-            pt_files_set = set(os.listdir(pt_files_dir))
-            print(f"Found {len(pt_files_set)} .pt files in {pt_files_dir}")
-        else:
-            print(f"Warning: pt_files directory {pt_files_dir} does not exist.")
 
     for i in tqdm(range(len(process_stack))):
         slide_name = process_stack.loc[i, 'slide_id']
@@ -306,40 +298,53 @@ if __name__ == '__main__':
         mask = wsi_object.visWSI(**vis_params, number_contours=True)
         mask.save(mask_path)
 
-        if enable_feat_ext:
-            # If .h5 does not exist, compute features and save .h5
-            h5_path = os.path.join(r_slide_save_dir, slide_id+'.h5')
-            if not os.path.isfile(h5_path):
+        h5_path = os.path.join(r_slide_save_dir, slide_id + '.h5')
+        
+        # Check if the feature file exists in the slide's result directory
+        if not os.path.isfile(h5_path):
+            # If not, check if it exists in the central h5 directory
+            source_h5_path = None
+            if h5_files_dir is not None:
+                source_h5_path = os.path.join(h5_files_dir, slide_id + '.h5')
+
+            if source_h5_path and os.path.isfile(source_h5_path):
+                # If it exists in the central repo, copy it over
+                print(f"Found pre-computed features at {source_h5_path}. Copying to results directory.")
+                shutil.copy(source_h5_path, h5_path)
+            elif enable_feat_ext:
+                # If it doesn't exist anywhere and we're allowed to, compute it
+                print(f"Features not found for {slide_id}. Computing now.")
+                if feature_extractor is None:
+                    print("Feature extractor not initiated, cannot compute features. Skipping slide.")
+                    continue
+                
                 _, _, wsi_object = compute_from_patches(wsi_object=wsi_object, 
                                                 model=model, 
                                                 feature_extractor=feature_extractor, 
                                                 img_transforms=img_transforms,
                                                 batch_size=exp_args.batch_size, **blocky_wsi_kwargs, 
                                                 attn_save_path=None, feat_save_path=h5_path, 
-                                                ref_scores=None)				
-            # Save .pt from .h5
-            file = h5py.File(h5_path, "r")
-            features = torch.tensor(file['features'][:])
-            torch.save(features, features_path)
-            file.close()
-        else:
-            assert pt_files_dir is not None, "pt_files_dir must be provided if enable_feat_ext is False"
-            features_path = os.path.join(pt_files_dir, slide_id + '.pt')
-            if not os.path.isfile(features_path):
-                print(f"Feature file {features_path} not found. Skipping slide {slide_id}.")
+                                                ref_scores=None)
+            else:
+                # If features don't exist and we can't compute them, skip
+                print(f"Feature file {slide_id}.h5 not found and feature extraction is disabled. Skipping slide.")
                 continue
 
-
-
-        # load features 
-        features = torch.load(features_path)
+        # By this point, h5_path should exist. Now we load from it.
+        try:
+            with h5py.File(h5_path, "r") as file:
+                features = torch.tensor(file['features'][:])
+        except Exception as e:
+            print(f"Could not load features from {h5_path}: {e}. Skipping slide.")
+            continue
+        
         process_stack.loc[i, 'bag_size'] = len(features)
         
         wsi_object.saveSegmentation(mask_file)
         Y_hats, Y_hats_str, Y_probs, A = infer_single_slide(model, features, label, reverse_label_dict, exp_args.n_classes)
         del features
         
-        if not os.path.isfile(block_map_save_path) and enable_feat_ext:
+        if not os.path.isfile(block_map_save_path):
             file = h5py.File(h5_path, "r")
             coords = file['coords'][:]
             file.close()
