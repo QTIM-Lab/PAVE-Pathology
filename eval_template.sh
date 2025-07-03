@@ -118,3 +118,4 @@ python eval.py \
 
 
 # salloc --partition=atesting_a100 --gres=gpu:1 --time=01:00:00 --ntasks=8
+# salloc --partition=atesting_a100 --gres=gpu:1 --time=01:00:00 --ntasks=8 --qos=testing --nodes=1
