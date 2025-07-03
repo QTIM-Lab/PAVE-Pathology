@@ -370,15 +370,28 @@ if __name__ == '__main__':
         if os.path.isfile(os.path.join(r_slide_save_dir, heatmap_save_name)):
             pass
         else:
-            heatmap = drawHeatmap(scores, coords, slide_path, wsi_object=wsi_object, cmap=heatmap_args.cmap, alpha=heatmap_args.alpha, use_holes=True, binarize=False, vis_level=-1, blank_canvas=False,
-                            thresh=-1, patch_size = vis_patch_size, convert_to_percentiles=True)
+            heatmap = drawHeatmap(
+                scores, 
+                coords, 
+                slide_path, 
+                wsi_object=wsi_object, 
+                cmap=heatmap_args.cmap, 
+                alpha=heatmap_args.alpha, 
+                use_holes=True, 
+                binarize=False, 
+                vis_level=-1, 
+                blank_canvas=False,
+                thresh=-1, 
+                patch_size = vis_patch_size, 
+                convert_to_percentiles=True
+            )
         
             heatmap.save(os.path.join(r_slide_save_dir, '{}_blockmap.png'.format(slide_id)))
             del heatmap
 
-        heatmap_vis_args = {'convert_to_percentiles': True, 'vis_level': heatmap_args.vis_level, 'blur': heatmap_args.blur, 'custom_downsample': heatmap_args.custom_downsample}
+        heatmap_vis_args = {'convert_to_percentiles': False, 'vis_level': heatmap_args.vis_level, 'blur': heatmap_args.blur, 'custom_downsample': heatmap_args.custom_downsample}
         if heatmap_args.use_ref_scores:
-            heatmap_vis_args['convert_to_percentiles'] = False
+            heatmap_vis_args['convert_to_percentiles'] = True
 
         heatmap_save_name = '{}_{}_roi_{}_blur_{}_rs_{}_bc_{}_a_{}_l_{}_bi_{}_{}.{}'.format(slide_id, float(patch_args.overlap), int(heatmap_args.use_roi),
                                                                                         int(heatmap_args.blur), 
@@ -391,13 +404,21 @@ if __name__ == '__main__':
             pass
         
         else:                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
-            heatmap = drawHeatmap(scores, coords, slide_path, wsi_object=wsi_object,  
-                                  cmap=heatmap_args.cmap, alpha=heatmap_args.alpha, **heatmap_vis_args, 
-                                  binarize=heatmap_args.binarize, 
-                                    blank_canvas=heatmap_args.blank_canvas,
-                                    thresh=heatmap_args.binary_thresh,  patch_size = vis_patch_size,
-                                    overlap=patch_args.overlap, 
-                                    top_left=top_left, bot_right = bot_right)
+            heatmap = drawHeatmap(
+                scores, 
+                coords, 
+                slide_path, 
+                wsi_object=wsi_object,  
+                cmap=heatmap_args.cmap, alpha=heatmap_args.alpha, **heatmap_vis_args, 
+                binarize=heatmap_args.binarize, 
+                blank_canvas=heatmap_args.blank_canvas,
+                thresh=heatmap_args.binary_thresh,
+                patch_size = vis_patch_size,
+                overlap=patch_args.overlap, 
+                top_left=top_left, bot_right = bot_right,
+                blur=heatmap_args.blur,
+                convert_to_percentiles=True
+            )
             if heatmap_args.save_ext == 'jpg':
                 heatmap.save(os.path.join(p_slide_save_dir, heatmap_save_name), quality=100)
             else:
@@ -419,4 +440,5 @@ if __name__ == '__main__':
                     heatmap.save(os.path.join(p_slide_save_dir, heatmap_save_name))
 
     with open(os.path.join(exp_args.raw_save_dir, exp_args.save_exp_code, 'config.yaml'), 'w') as outfile:
+        yaml.dump(config_dict, outfile, default_flow_style=False)
         yaml.dump(config_dict, outfile, default_flow_style=False)

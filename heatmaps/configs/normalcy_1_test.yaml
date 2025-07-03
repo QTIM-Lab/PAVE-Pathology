@@ -59,7 +59,7 @@ heatmap_arguments:
    # whether to calculate percentile scores in reference to the set of non-overlapping patches
    use_ref_scores: true
    # whether to use gaussian blur for further smoothing
-   blur: false
+   blur: true
    # whether to shift the 4 default corner points for checking if a patch is inside a foreground contour
    use_center_shift: true
    # whether to only compute heatmap for ROI specified by x1, x2, y1, y2
