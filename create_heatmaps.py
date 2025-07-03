@@ -93,13 +93,12 @@ def parse_config_dict(args, config_dict):
         config_dict['exp_arguments']['save_exp_code'] = args.save_exp_code
     if args.overlap is not None:
         config_dict['patching_arguments']['overlap'] = args.overlap
-    if args.pt_files is not None:
-        config_dict['data_arguments']['data_dir'] = args.pt_files
     return config_dict
 
 if __name__ == '__main__':
     config_path = os.path.join('heatmaps/configs', args.config_file)
     config_dict = yaml.safe_load(open(config_path, 'r'))
+
     config_dict = parse_config_dict(args, config_dict)
 
     for key, value in config_dict.items():
@@ -109,6 +108,14 @@ if __name__ == '__main__':
                 print (value_key + " : " + str(value_value))
         else:
             print ('\n'+key + " : " + str(value))
+
+    enable_feat_ext = False
+    if hasattr(args, 'enable_feat_ext'):
+        enable_feat_ext = args.enable_feat_ext
+
+    pt_files_dir = None
+    if hasattr(args, 'pt_files'):
+        pt_files_dir = args.pt_files
 
     args = config_dict
     patch_args = argparse.Namespace(**args['patching_arguments'])
@@ -177,10 +184,6 @@ if __name__ == '__main__':
     else:
         raise NotImplementedError
 
-    enable_feat_ext = False
-    if hasattr(args, 'enable_feat_ext'):
-        enable_feat_ext = args.enable_feat_ext
-
     feature_extractor = None
     img_transforms = None
     if enable_feat_ext:
@@ -202,9 +205,8 @@ if __name__ == '__main__':
     'custom_downsample':patch_args.custom_downsample, 'level': patch_args.patch_level, 'use_center_shift': heatmap_args.use_center_shift}
 
     # If pt_files path is provided, get a set of all .pt files in that directory for quick lookup
-    pt_files_dir = None
     pt_files_set = set()
-    if args.pt_files:
+    if pt_files_dir:
         pt_files_dir = args.pt_files
         if os.path.isdir(pt_files_dir):
             pt_files_set = set(os.listdir(pt_files_dir))
