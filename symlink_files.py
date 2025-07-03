@@ -3,8 +3,8 @@ from pathlib import Path
 from tqdm import tqdm # For a nice progress bar (install with: pip install tqdm)
 
 def consolidate_files_with_symlinks(
-    data_root_dir="/scratch/alpine/ataghinia@xsede/", 
-    consolidated_folder_base="/scratch/alpine/ataghinia@xsede.org/pave_training/pathology_features"
+    data_root_dir="/scratch/alpine/ataghinia@xsede.org/", 
+    consolidated_folder_base="/scratch/alpine/ataghinia@xsede.org/pave_training/pathology_features/"
 ):
     """
     Recursively finds all specified file types within corresponding subdirectories
