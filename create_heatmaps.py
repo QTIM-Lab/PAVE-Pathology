@@ -339,7 +339,7 @@ if __name__ == '__main__':
         Y_hats, Y_hats_str, Y_probs, A = infer_single_slide(model, features, label, reverse_label_dict, exp_args.n_classes)
         del features
         
-        if not os.path.isfile(block_map_save_path):
+        if not os.path.isfile(block_map_save_path) and enable_feat_ext:
             file = h5py.File(h5_path, "r")
             coords = file['coords'][:]
             file.close()
