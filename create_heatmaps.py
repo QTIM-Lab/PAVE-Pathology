@@ -207,7 +207,6 @@ if __name__ == '__main__':
     # If pt_files path is provided, get a set of all .pt files in that directory for quick lookup
     pt_files_set = set()
     if pt_files_dir:
-        pt_files_dir = args.pt_files
         if os.path.isdir(pt_files_dir):
             pt_files_set = set(os.listdir(pt_files_dir))
             print(f"Found {len(pt_files_set)} .pt files in {pt_files_dir}")
