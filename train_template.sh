@@ -168,3 +168,13 @@ set +x
 # Job for pathology_sufficiency_multi_label, tuned hyperparameters:
 
 # sbatch train_template.sh --task pathology_sufficiency_multi_label --exp_code sufficiency_multi_label_pos --model_type clam_mb --data_root_dir /scratch/alpine/$USER/pave_training --use_pos_embed --multi_label
+
+
+
+# Job for pathology_sufficiency_subtyping, pos embed:
+
+# sbatch train_template.sh --task pathology_sufficiency_subtyping --exp_code sufficiency_subtyping_pos --model_type clam_mb --data_root_dir /scratch/alpine/$USER/pave_training --use_pos_embed
+
+# Job for pathology_sufficiency_subtyping, no pos embed:
+
+# sbatch train_template.sh --task pathology_sufficiency_subtyping --exp_code sufficiency_subtyping --model_type clam_mb --data_root_dir /scratch/alpine/$USER/pave_training
