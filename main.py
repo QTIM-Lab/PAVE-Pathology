@@ -216,6 +216,20 @@ elif args.task == 'pathology_sufficiency':
     if args.model_type != 'clam_sb': print(f"Warning: For 'pathology_sufficiency', model_type should be {args.model_type := 'clam_sb'}. Overriding.")
     if args.subtyping: print(f"Warning: For 'pathology_sufficiency', subtyping should be {args.subtyping := False}. Overriding.")
 
+elif args.task == 'pathology_sufficiency_subtyping':
+    args.n_classes=3
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_sufficiency_subtyping.csv',
+                            data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
+                            shuffle = False, 
+                            seed = args.seed, 
+                            print_info = True,
+                            label_dict = {'sufficient':0, 'blurry':1, 'insufficient':2},
+                            patient_strat=False,
+                            ignore=[],)
+    # We should be using clam_mb and subtyping
+    if args.model_type != 'clam_mb': print(f"Warning: For 'pathology_sufficiency_subtyping', model_type should be {args.model_type := 'clam_mb'}. Overriding.")
+    if not args.subtyping: print(f"Warning: For 'pathology_sufficiency_subtyping', subtyping should be {args.subtyping := True}. Overriding.")
+
 elif args.task == 'pathology_normalcy':
     args.n_classes=2
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_normalcy.csv',
