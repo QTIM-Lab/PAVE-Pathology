@@ -206,6 +206,7 @@ if __name__ == '__main__':
         pt_files_dir = args.pt_files
         if os.path.isdir(pt_files_dir):
             pt_files_set = set(os.listdir(pt_files_dir))
+            print(f"Found {len(pt_files_set)} .pt files in {pt_files_dir}")
         else:
             print(f"Warning: pt_files directory {pt_files_dir} does not exist.")
 
@@ -301,39 +302,31 @@ if __name__ == '__main__':
             vis_params['vis_level'] = best_level
         mask = wsi_object.visWSI(**vis_params, number_contours=True)
         mask.save(mask_path)
-        
-        features_path = os.path.join(r_slide_save_dir, slide_id+'.pt')
-        h5_path = os.path.join(r_slide_save_dir, slide_id+'.h5')
 
-        # If pt_files_dir is provided, check for .pt file there first
-        pt_file_found = False
-        if pt_files_dir is not None:
-            pt_file_name = slide_id + '.pt'
-            pt_file_path = os.path.join(pt_files_dir, pt_file_name)
-            if pt_file_name in pt_files_set and os.path.isfile(pt_file_path):
-                features_path = pt_file_path
-                pt_file_found = True
-
-        # Only do feature extraction if enable_feat_ext is True
-        if not pt_file_found and not os.path.isfile(features_path):
-            if enable_feat_ext:
-                # If .h5 does not exist, compute features and save .h5
-                if not os.path.isfile(h5_path):
-                    _, _, wsi_object = compute_from_patches(wsi_object=wsi_object, 
-                                                    model=model, 
-                                                    feature_extractor=feature_extractor, 
-                                                    img_transforms=img_transforms,
-                                                    batch_size=exp_args.batch_size, **blocky_wsi_kwargs, 
-                                                    attn_save_path=None, feat_save_path=h5_path, 
-                                                    ref_scores=None)				
-                # Save .pt from .h5
-                file = h5py.File(h5_path, "r")
-                features = torch.tensor(file['features'][:])
-                torch.save(features, features_path)
-                file.close()
-            else:
-                print(f"Feature file {features_path} not found and feature extraction is disabled. Skipping slide {slide_id}.")
+        if enable_feat_ext:
+            # If .h5 does not exist, compute features and save .h5
+            h5_path = os.path.join(r_slide_save_dir, slide_id+'.h5')
+            if not os.path.isfile(h5_path):
+                _, _, wsi_object = compute_from_patches(wsi_object=wsi_object, 
+                                                model=model, 
+                                                feature_extractor=feature_extractor, 
+                                                img_transforms=img_transforms,
+                                                batch_size=exp_args.batch_size, **blocky_wsi_kwargs, 
+                                                attn_save_path=None, feat_save_path=h5_path, 
+                                                ref_scores=None)				
+            # Save .pt from .h5
+            file = h5py.File(h5_path, "r")
+            features = torch.tensor(file['features'][:])
+            torch.save(features, features_path)
+            file.close()
+        else:
+            assert pt_files_dir is not None, "pt_files_dir must be provided if enable_feat_ext is False"
+            features_path = os.path.join(pt_files_dir, slide_id + '.pt')
+            if not os.path.isfile(features_path):
+                print(f"Feature file {features_path} not found. Skipping slide {slide_id}.")
                 continue
+
+
 
         # load features 
         features = torch.load(features_path)
@@ -343,7 +336,7 @@ if __name__ == '__main__':
         Y_hats, Y_hats_str, Y_probs, A = infer_single_slide(model, features, label, reverse_label_dict, exp_args.n_classes)
         del features
         
-        if not os.path.isfile(block_map_save_path): 
+        if not os.path.isfile(block_map_save_path):
             file = h5py.File(h5_path, "r")
             coords = file['coords'][:]
             file.close()
