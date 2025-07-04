@@ -12,7 +12,7 @@ parser.add_argument('--seed', type=int, default=1,
                     help='random seed (default: 1)')
 parser.add_argument('--k', type=int, default=10,
                     help='number of splits (default: 10)')
-parser.add_argument('--task', type=str, choices=['task_1_tumor_vs_normal', 'task_2_tumor_subtyping', 'pathology_full_subtyping', 'pathology_sufficiency', 'pathology_normalcy'])
+parser.add_argument('--task', type=str, choices=['task_1_tumor_vs_normal', 'task_2_tumor_subtyping', 'pathology_full_subtyping', 'pathology_sufficiency', 'pathology_normalcy', 'pathology_sufficiency_subtyping'])
 parser.add_argument('--val_frac', type=float, default= 0.1,
                     help='fraction of labels for validation (default: 0.1)')
 parser.add_argument('--test_frac', type=float, default= 0.1,
@@ -60,6 +60,16 @@ elif args.task == 'pathology_sufficiency':
                             label_dict = {'insufficient':0, 'sufficient':1},
                             patient_strat=False,
                             ignore=[])
+
+elif args.task == 'pathology_sufficiency_subtyping':
+    args.n_classes=3
+    dataset = Generic_WSI_Classification_Dataset(csv_path = 'dataset_csv/pathology_sufficiency_subtyping.csv',
+                            shuffle = False,
+                            seed = args.seed, 
+                            print_info = True,
+                            label_dict = {'sufficient':0, 'blurry':1, 'insufficient':2},
+                            patient_strat=False,
+                            ignore=[],)
 
 elif args.task == 'pathology_normalcy':
     args.n_classes=2
