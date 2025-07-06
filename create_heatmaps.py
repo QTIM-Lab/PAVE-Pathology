@@ -416,7 +416,6 @@ if __name__ == '__main__':
                 patch_size = vis_patch_size,
                 overlap=patch_args.overlap, 
                 top_left=top_left, bot_right = bot_right,
-                blur=heatmap_args.blur,
                 convert_to_percentiles=True
             )
             if heatmap_args.save_ext == 'jpg':
