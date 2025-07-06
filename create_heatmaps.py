@@ -410,13 +410,10 @@ if __name__ == '__main__':
                 slide_path, 
                 wsi_object=wsi_object,  
                 cmap=heatmap_args.cmap, alpha=heatmap_args.alpha, **heatmap_vis_args, 
-                binarize=heatmap_args.binarize, 
                 blank_canvas=heatmap_args.blank_canvas,
-                thresh=heatmap_args.binary_thresh,
                 patch_size = vis_patch_size,
                 overlap=patch_args.overlap, 
                 top_left=top_left, bot_right = bot_right,
-                convert_to_percentiles=True
             )
             if heatmap_args.save_ext == 'jpg':
                 heatmap.save(os.path.join(p_slide_save_dir, heatmap_save_name), quality=100)
