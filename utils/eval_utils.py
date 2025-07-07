@@ -202,12 +202,12 @@ def summary(model, loader, args):
             plt.legend(loc="lower right")
 
             # Annotate every other threshold point (skip the first and last for clarity)
-            for i in range(1, len(fpr)-1, 2):
+            for i in range(1, len(fpr)-1):
                 plt.annotate(f'{thresholds[i]:.2f}', 
                              (fpr[i], tpr[i]), 
                              textcoords="offset points", 
-                             xytext=(5,5), 
-                             ha='left', fontsize=4, color='blue', rotation=0)
+                             xytext=(0,0), 
+                             ha='left', fontsize=4, color='black', rotation=0)
 
             if hasattr(args, 'save_dir'):
                 roc_save_path = os.path.join(args.save_dir, 'roc_curve.png')
