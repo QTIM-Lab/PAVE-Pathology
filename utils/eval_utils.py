@@ -15,6 +15,56 @@ from sklearn.preprocessing import label_binarize
 import matplotlib.pyplot as plt
 import seaborn as sns
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 unused import
+from itertools import cycle
+
+def plot_multiclass_roc(all_labels, all_probs, n_classes, save_dir, class_labels):
+    all_labels_b = label_binarize(all_labels, classes=range(n_classes))
+
+    fpr = dict()
+    tpr = dict()
+    roc_auc = dict()
+    for i in range(n_classes):
+        fpr[i], tpr[i], _ = roc_curve(all_labels_b[:, i], all_probs[:, i])
+        roc_auc[i] = auc(fpr[i], tpr[i])
+
+    fpr["micro"], tpr["micro"], _ = roc_curve(all_labels_b.ravel(), all_probs.ravel())
+    roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
+
+    all_fpr = np.unique(np.concatenate([fpr[i] for i in range(n_classes)]))
+    mean_tpr = np.zeros_like(all_fpr)
+    for i in range(n_classes):
+        mean_tpr += np.interp(all_fpr, fpr[i], tpr[i])
+    mean_tpr /= n_classes
+    fpr["macro"] = all_fpr
+    tpr["macro"] = mean_tpr
+    roc_auc["macro"] = auc(fpr["macro"], tpr["macro"])
+
+    plt.figure(figsize=(10, 8))
+    plt.plot(fpr["micro"], tpr["micro"],
+             label=f'micro-average ROC curve (area = {roc_auc["micro"]:0.2f})',
+             color='deeppink', linestyle=':', linewidth=4)
+
+    plt.plot(fpr["macro"], tpr["macro"],
+             label=f'macro-average ROC curve (area = {roc_auc["macro"]:0.2f})',
+             color='navy', linestyle=':', linewidth=4)
+
+    colors = cycle(['aqua', 'darkorange', 'cornflowerblue', 'green', 'red', 'purple', 'brown'])
+    for i, color in zip(range(n_classes), colors):
+        plt.plot(fpr[i], tpr[i], color=color, lw=2,
+                 label=f'ROC curve of {class_labels[i]} (area = {roc_auc[i]:0.2f})')
+
+    plt.plot([0, 1], [0, 1], 'k--', lw=2)
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Multi-class Receiver Operating Characteristic')
+    plt.legend(loc="lower right")
+    
+    save_path = os.path.join(save_dir, 'multiclass_roc_curve.png')
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    plt.close()
+    print(f"Multi-class ROC curve saved to {save_path}")
 
 def initiate_model(args, ckpt_path, device='cuda'):
     print('Init Model')    
@@ -166,6 +216,7 @@ def summary(model, loader, args):
             plt.close()
             auc_score = roc_auc_score(all_labels, all_probs[:, 1])
         else:
+            plot_multiclass_roc(all_labels, all_probs, args.n_classes, args.save_dir, class_labels)
             binary_labels = label_binarize(all_labels, classes=[i for i in range(args.n_classes)])
             for class_idx in range(args.n_classes):
                 if class_idx in all_labels:
