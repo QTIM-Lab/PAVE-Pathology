@@ -107,7 +107,15 @@ parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mi
 parser.add_argument('--exp_code', type=str, help='experiment code for saving results')
 parser.add_argument('--weighted_sample', action='store_true', default=False, help='enable weighted sampling')
 parser.add_argument('--model_size', type=str, choices=['small', 'big'], default='small', help='size of model, does not affect mil')
-parser.add_argument('--task', type=str, choices=['task_1_tumor_vs_normal',  'task_2_tumor_subtyping', "pathology_full_subtyping", "pathology_sufficiency", "pathology_normalcy", "pathology_sufficiency_subtyping"])
+parser.add_argument('--task', type=str, choices=[
+    'task_1_tumor_vs_normal',  
+    'task_2_tumor_subtyping', 
+    "pathology_full_subtyping", 
+    "pathology_sufficiency", 
+    "pathology_normalcy", 
+    "pathology_sufficiency_subtyping",
+    "pathology_management"
+    ])
 ### CLAM specific options
 parser.add_argument('--no_inst_cluster', action='store_true', default=False,
                      help='disable instance-level clustering')
@@ -260,6 +268,23 @@ elif args.task == 'pathology_normalcy':
         args.subtyping = False
         print(f"Warning: For 'pathology_normalcy', subtyping should be {args.subtyping}. Overriding.")
 
+elif args.task == 'pathology_management':
+    args.n_classes=2
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_management.csv',
+                            data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
+                            shuffle = False, 
+                            seed = args.seed, 
+                            print_info = True,
+                            label_dict = {'follow_up':0, 'treatment':1},
+                            patient_strat=False,
+                            ignore=[],)
+    # We should be using clam_sb and not subtyping
+    if args.model_type != 'clam_sb':
+        args.model_type = 'clam_sb'
+        print(f"Warning: For 'pathology_management', model_type should be {args.model_type}. Overriding.")
+    if args.subtyping:
+        args.subtyping = False
+        print(f"Warning: For 'pathology_management', subtyping should be {args.subtyping}. Overriding.")
 else:
     raise NotImplementedError
     
