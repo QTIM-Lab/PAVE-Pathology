@@ -39,7 +39,14 @@ parser.add_argument('--fold', type=int, default=-1, help='single fold to evaluat
 parser.add_argument('--micro_average', action='store_true', default=False, 
                     help='use micro_average instead of macro_avearge for multiclass AUC')
 parser.add_argument('--split', type=str, choices=['train', 'val', 'test', 'all'], default='val')
-parser.add_argument('--task', type=str, choices=['task_1_tumor_vs_normal',  'task_2_tumor_subtyping', 'pathology_full_subtyping', 'pathology_sufficiency', 'pathology_normalcy'])
+parser.add_argument('--task', type=str, choices=[
+    'task_1_tumor_vs_normal', 
+    'task_2_tumor_subtyping', 
+    'pathology_full_subtyping', 
+    'pathology_sufficiency', 
+    'pathology_normalcy',
+    'pathology_sufficiency_subtyping',
+    'pathology_management'])
 parser.add_argument('--drop_out', type=float, default=0.25, help='dropout')
 parser.add_argument('--embed_dim', type=int, default=1024)
 parser.add_argument('--threshold', type=float, default=None, help='decision threshold for binary classification')
@@ -118,6 +125,28 @@ elif args.task == 'pathology_normalcy':
     args.n_classes=2
     args.label_dict = {'normal':0, 'abnormal':1}
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_normalcy.csv',
+                            data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
+                            shuffle = False, 
+                            print_info = True,
+                            label_dict = args.label_dict,
+                            patient_strat=False,
+                            ignore=[])
+
+elif args.task == 'pathology_sufficiency_subtyping':
+    args.n_classes=3
+    args.label_dict = {'sufficient':0, 'blurry':1, 'insufficient':2}
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_sufficiency_subtyping.csv',
+                            data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
+                            shuffle = False, 
+                            print_info = True,
+                            label_dict = args.label_dict,
+                            patient_strat=False,
+                            ignore=[])
+
+elif args.task == 'pathology_management':
+    args.n_classes=2
+    args.label_dict = {'follow_up':0, 'treatment':1}
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_management.csv',
                             data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
                             shuffle = False, 
                             print_info = True,
