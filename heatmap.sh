@@ -4,7 +4,7 @@
 #SBATCH --qos=normal
 #SBATCH --partition=aa100,al40
 #SBATCH --gres=gpu:1
-#SBATCH --mem=128GB
+#SBATCH --mem=224GB
 #SBATCH --ntasks=1
 #SBATCH --time=04:00:00
 #SBATCH --account=amc-general
