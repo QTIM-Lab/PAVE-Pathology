@@ -194,12 +194,20 @@ if __name__ == '__main__':
             slide_name+=data_args.slide_ext
         print('\nprocessing: ', slide_name)	
 
+        
+
         try:
             label = process_stack.loc[i, 'label']
         except KeyError:
             label = 'Unspecified'
 
         slide_id = slide_name.replace(data_args.slide_ext, '')
+
+        heatmap_save_name = '{}_{}_roi_{}_blur_{}_rs_{}_bc_{}_a_{}_l_{}_bi_{}_{}.{}'.format(slide_id, float(patch_args.overlap), int(heatmap_args.use_roi),
+                                                                                        int(heatmap_args.blur), 
+                                                                                        int(heatmap_args.use_ref_scores), int(heatmap_args.blank_canvas), 
+                                                                                        float(heatmap_args.alpha), int(heatmap_args.vis_level), 
+                                                                                        int(heatmap_args.binarize), float(heatmap_args.binary_thresh), heatmap_args.save_ext)
 
         if not isinstance(label, str):
             grouping = reverse_label_dict[label]
@@ -211,6 +219,11 @@ if __name__ == '__main__':
 
         r_slide_save_dir = os.path.join(exp_args.raw_save_dir, exp_args.save_exp_code, str(grouping),  slide_id)
         os.makedirs(r_slide_save_dir, exist_ok=True)
+
+        if os.path.isfile(os.path.join(p_slide_save_dir, heatmap_save_name)):
+            print(f"Heatmap already exists: {os.path.join(p_slide_save_dir, heatmap_save_name)}")
+            continue # Skip if heatmap already exists
+
 
         if heatmap_args.use_roi:
             x1, x2 = process_stack.loc[i, 'x1'], process_stack.loc[i, 'x2']
