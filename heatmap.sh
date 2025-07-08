@@ -1,12 +1,12 @@
 #!/bin/bash
 
 #SBATCH --nodes=1
-#SBATCH --qos=normal
+#SBATCH --qos=high
 #SBATCH --partition=aa100,al40
 #SBATCH --gres=gpu:1
 #SBATCH --mem=128GB
-#SBATCH --ntasks=16
-#SBATCH --time=23:59:00
+#SBATCH --ntasks=1
+#SBATCH --time=04:00:00
 #SBATCH --account=amc-general
 #SBATCH --job-name=heatmap
 #SBATCH --output="job_logs/heatmap_%J.log"
