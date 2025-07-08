@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --nodes=1
-#SBATCH --qos=gpu
+#SBATCH --qos=normal
 #SBATCH --partition=aa100,al40
 #SBATCH --gres=gpu:1
 #SBATCH --mem=128GB
