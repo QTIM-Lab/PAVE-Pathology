@@ -189,264 +189,268 @@ if __name__ == '__main__':
     'custom_downsample':patch_args.custom_downsample, 'level': patch_args.patch_level, 'use_center_shift': heatmap_args.use_center_shift}
 
     for i in tqdm(range(len(process_stack))):
-        slide_name = process_stack.loc[i, 'slide_id']
-        if data_args.slide_ext not in slide_name:
-            slide_name+=data_args.slide_ext
-        print('\nprocessing: ', slide_name)	
-
-        
-
         try:
-            label = process_stack.loc[i, 'label']
-        except KeyError:
-            label = 'Unspecified'
+            slide_name = process_stack.loc[i, 'slide_id']
+            if data_args.slide_ext not in slide_name:
+                slide_name+=data_args.slide_ext
+            print('\nprocessing: ', slide_name)	
 
-        slide_id = slide_name.replace(data_args.slide_ext, '')
+            
 
-        heatmap_save_name = '{}_{}_roi_{}_blur_{}_rs_{}_bc_{}_a_{}_l_{}_bi_{}_{}.{}'.format(slide_id, float(patch_args.overlap), int(heatmap_args.use_roi),
-                                                                                        int(heatmap_args.blur), 
-                                                                                        int(heatmap_args.use_ref_scores), int(heatmap_args.blank_canvas), 
-                                                                                        float(heatmap_args.alpha), int(heatmap_args.vis_level), 
-                                                                                        int(heatmap_args.binarize), float(heatmap_args.binary_thresh), heatmap_args.save_ext)
+            try:
+                label = process_stack.loc[i, 'label']
+            except KeyError:
+                label = 'Unspecified'
 
-        if not isinstance(label, str):
-            grouping = reverse_label_dict[label]
-        else:
-            grouping = label
+            slide_id = slide_name.replace(data_args.slide_ext, '')
 
-        p_slide_save_dir = os.path.join(exp_args.production_save_dir, exp_args.save_exp_code, str(grouping))
-        os.makedirs(p_slide_save_dir, exist_ok=True)
+            heatmap_save_name = '{}_{}_roi_{}_blur_{}_rs_{}_bc_{}_a_{}_l_{}_bi_{}_{}.{}'.format(slide_id, float(patch_args.overlap), int(heatmap_args.use_roi),
+                                                                                            int(heatmap_args.blur), 
+                                                                                            int(heatmap_args.use_ref_scores), int(heatmap_args.blank_canvas), 
+                                                                                            float(heatmap_args.alpha), int(heatmap_args.vis_level), 
+                                                                                            int(heatmap_args.binarize), float(heatmap_args.binary_thresh), heatmap_args.save_ext)
 
-        r_slide_save_dir = os.path.join(exp_args.raw_save_dir, exp_args.save_exp_code, str(grouping),  slide_id)
-        os.makedirs(r_slide_save_dir, exist_ok=True)
-
-        if os.path.isfile(os.path.join(p_slide_save_dir, heatmap_save_name)):
-            print(f"Heatmap already exists: {os.path.join(p_slide_save_dir, heatmap_save_name)}")
-            continue # Skip if heatmap already exists
-
-
-        if heatmap_args.use_roi:
-            x1, x2 = process_stack.loc[i, 'x1'], process_stack.loc[i, 'x2']
-            y1, y2 = process_stack.loc[i, 'y1'], process_stack.loc[i, 'y2']
-            top_left = (int(x1), int(y1))
-            bot_right = (int(x2), int(y2))
-        else:
-            top_left = None
-            bot_right = None
-        
-        print('slide id: ', slide_id)
-        print('top left: ', top_left, ' bot right: ', bot_right)
-
-        if isinstance(data_args.data_dir, str):
-            slide_path = os.path.join(data_args.data_dir, slide_name)
-        elif isinstance(data_args.data_dir, dict):
-            data_dir_key = process_stack.loc[i, data_args.data_dir_key]
-            slide_path = os.path.join(data_args.data_dir[data_dir_key], slide_name)
-        else:
-            raise NotImplementedError
-
-        mask_file = os.path.join(r_slide_save_dir, slide_id+'_mask.pkl')
-        
-        # Load segmentation and filter parameters
-        seg_params = def_seg_params.copy()
-        filter_params = def_filter_params.copy()
-        vis_params = def_vis_params.copy()
-
-        seg_params = load_params(process_stack.loc[i], seg_params)
-        filter_params = load_params(process_stack.loc[i], filter_params)
-        vis_params = load_params(process_stack.loc[i], vis_params)
-
-        keep_ids = str(seg_params['keep_ids'])
-        if len(keep_ids) > 0 and keep_ids != 'none':
-            seg_params['keep_ids'] = np.array(keep_ids.split(',')).astype(int)
-        else:
-            seg_params['keep_ids'] = []
-
-        exclude_ids = str(seg_params['exclude_ids'])
-        if len(exclude_ids) > 0 and exclude_ids != 'none':
-            seg_params['exclude_ids'] = np.array(exclude_ids.split(',')).astype(int)
-        else:
-            seg_params['exclude_ids'] = []
-
-        for key, val in seg_params.items():
-            print('{}: {}'.format(key, val))
-
-        for key, val in filter_params.items():
-            print('{}: {}'.format(key, val))
-
-        for key, val in vis_params.items():
-            print('{}: {}'.format(key, val))
-        
-        print('Initializing WSI object')
-        wsi_object = initialize_wsi(slide_path, seg_mask_path=mask_file, seg_params=seg_params, filter_params=filter_params)
-        print('Done!')
-
-        wsi_ref_downsample = wsi_object.level_downsamples[patch_args.patch_level]
-
-        # the actual patch size for heatmap visualization should be the patch size * downsample factor * custom downsample factor
-        vis_patch_size = tuple((np.array(patch_size) * np.array(wsi_ref_downsample) * patch_args.custom_downsample).astype(int))
-
-        block_map_save_path = os.path.join(r_slide_save_dir, '{}_blockmap.h5'.format(slide_id))
-        mask_path = os.path.join(r_slide_save_dir, '{}_mask.jpg'.format(slide_id))
-        if vis_params['vis_level'] < 0:
-            best_level = wsi_object.wsi.get_best_level_for_downsample(32)
-            vis_params['vis_level'] = best_level
-        mask = wsi_object.visWSI(**vis_params, number_contours=True)
-        mask.save(mask_path)
-        
-        h5_path = os.path.join(r_slide_save_dir, slide_id + '.h5')
-
-        # Core logic to secure the feature file
-        if not os.path.isfile(h5_path):
-            source_h5_path = None
-            if h5_files_dir:
-                source_h5_path = os.path.join(h5_files_dir, slide_id + '.h5')
-
-            if source_h5_path and os.path.isfile(source_h5_path):
-                print(f"Found features in central repo: {source_h5_path}. Copying...")
-                shutil.copy(source_h5_path, h5_path)
-            elif enable_feat_ext:
-                print(f"Features not found for {slide_id}. Computing from WSI...")
-                if feature_extractor is None:
-                    print("ERROR: Feature extraction enabled, but extractor not initialized. Skipping.")
-                    continue
-                
-                _, _, wsi_object = compute_from_patches(
-                    wsi_object=wsi_object, 
-                    model=model,
-                    feature_extractor=feature_extractor, 
-                    img_transforms=img_transforms,
-                    batch_size=exp_args.batch_size, 
-                    **blocky_wsi_kwargs, 
-                    feat_save_path=h5_path
-                )
+            if not isinstance(label, str):
+                grouping = reverse_label_dict[label]
             else:
-                print(f"Feature file {slide_id}.h5 not found and feature extraction is disabled. Skipping slide.")
-                continue
-        
-        # Load features and run inference
-        try:
-            with h5py.File(h5_path, "r") as file:
-                features = torch.tensor(file['features'][:])
-        except Exception as e:
-            print(f"Failed to read {h5_path}. Error: {e}. Skipping.")
-            continue
-        
-        process_stack.loc[i, 'bag_size'] = len(features)
-        
-        wsi_object.saveSegmentation(mask_file)
-        Y_hats, Y_hats_str, Y_probs, A = infer_single_slide(model, features, label, reverse_label_dict, exp_args.n_classes)
-        del features
-        
-        if not os.path.isfile(block_map_save_path):
-            with h5py.File(h5_path, 'r') as hf:
-                coords = hf['coords'][:]
-            asset_dict = {'attention_scores': A, 'coords': coords}
-            block_map_save_path = save_hdf5(block_map_save_path, asset_dict, mode='w')
-        
-        # save top 3 predictions
-        for c in range(exp_args.n_classes):
-            process_stack.loc[i, 'Pred_{}'.format(c)] = Y_hats_str[c]
-            process_stack.loc[i, 'p_{}'.format(c)] = Y_probs[c]
+                grouping = label
 
-        os.makedirs('heatmaps/results/', exist_ok=True)
-        if data_args.process_list is not None:
-            process_stack.to_csv('heatmaps/results/{}.csv'.format(data_args.process_list.replace('.csv', '')), index=False)
-        else:
-            process_stack.to_csv('heatmaps/results/{}.csv'.format(exp_args.save_exp_code), index=False)
-        
-        file = h5py.File(block_map_save_path, 'r')
-        dset = file['attention_scores']
-        coord_dset = file['coords']
-        scores = dset[:]
-        coords = coord_dset[:]
-        file.close()
+            p_slide_save_dir = os.path.join(exp_args.production_save_dir, exp_args.save_exp_code, str(grouping))
+            os.makedirs(p_slide_save_dir, exist_ok=True)
 
-        samples = sample_args.samples
-        for sample in samples:
-            if sample['sample']:
-                tag = "label_{}_pred_{}".format(label, Y_hats[0])
-                sample_save_dir =  os.path.join(exp_args.production_save_dir, exp_args.save_exp_code, 'sampled_patches', str(tag), sample['name'])
-                os.makedirs(sample_save_dir, exist_ok=True)
-                print('sampling {}'.format(sample['name']))
-                sample_results = sample_rois(scores, coords, k=sample['k'], mode=sample['mode'], seed=sample['seed'], 
-                    score_start=sample.get('score_start', 0), score_end=sample.get('score_end', 1))
-                for idx, (s_coord, s_score) in enumerate(zip(sample_results['sampled_coords'], sample_results['sampled_scores'])):
-                    print('coord: {} score: {:.3f}'.format(s_coord, s_score))
-                    patch = wsi_object.wsi.read_region(tuple(s_coord), patch_args.patch_level, (patch_args.patch_size, patch_args.patch_size)).convert('RGB')
-                    patch.save(os.path.join(sample_save_dir, '{}_{}_x_{}_y_{}_a_{:.3f}.png'.format(idx, slide_id, s_coord[0], s_coord[1], s_score)))
+            r_slide_save_dir = os.path.join(exp_args.raw_save_dir, exp_args.save_exp_code, str(grouping),  slide_id)
+            os.makedirs(r_slide_save_dir, exist_ok=True)
 
-        wsi_kwargs = {'top_left': top_left, 'bot_right': bot_right, 'patch_size': patch_size, 'step_size': step_size, 
-        'custom_downsample':patch_args.custom_downsample, 'level': patch_args.patch_level, 'use_center_shift': heatmap_args.use_center_shift}
-
-        heatmap_save_name = '{}_blockmap.tiff'.format(slide_id)
-        if os.path.isfile(os.path.join(r_slide_save_dir, heatmap_save_name)):
-            pass
-        else:
-            heatmap = drawHeatmap(
-                scores, 
-                coords, 
-                slide_path, 
-                wsi_object=wsi_object, 
-                cmap=heatmap_args.cmap, 
-                alpha=heatmap_args.alpha, 
-                use_holes=True, 
-                binarize=False, 
-                vis_level=-1, 
-                blank_canvas=False,
-                thresh=-1, 
-                patch_size = vis_patch_size, 
-                convert_to_percentiles=True
-            )
-        
-            heatmap.save(os.path.join(r_slide_save_dir, '{}_blockmap.png'.format(slide_id)))
-            del heatmap
-
-        heatmap_vis_args = {'convert_to_percentiles': False, 'vis_level': heatmap_args.vis_level, 'blur': heatmap_args.blur, 'custom_downsample': heatmap_args.custom_downsample}
-        if heatmap_args.use_ref_scores:
-            heatmap_vis_args['convert_to_percentiles'] = True
-
-        heatmap_save_name = '{}_{}_roi_{}_blur_{}_rs_{}_bc_{}_a_{}_l_{}_bi_{}_{}.{}'.format(slide_id, float(patch_args.overlap), int(heatmap_args.use_roi),
-                                                                                        int(heatmap_args.blur), 
-                                                                                        int(heatmap_args.use_ref_scores), int(heatmap_args.blank_canvas), 
-                                                                                        float(heatmap_args.alpha), int(heatmap_args.vis_level), 
-                                                                                        int(heatmap_args.binarize), float(heatmap_args.binary_thresh), heatmap_args.save_ext)
-
-
-        if os.path.isfile(os.path.join(p_slide_save_dir, heatmap_save_name)):
-            pass
-        
-        else:                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
-            heatmap = drawHeatmap(
-                scores, 
-                coords, 
-                slide_path, 
-                wsi_object=wsi_object,  
-                cmap=heatmap_args.cmap, alpha=heatmap_args.alpha, **heatmap_vis_args, 
-                blank_canvas=heatmap_args.blank_canvas,
-                patch_size = vis_patch_size,
-                overlap=patch_args.overlap, 
-                top_left=top_left, bot_right = bot_right,
-            )
-            if heatmap_args.save_ext == 'jpg':
-                heatmap.save(os.path.join(p_slide_save_dir, heatmap_save_name), quality=100)
-            else:
-                heatmap.save(os.path.join(p_slide_save_dir, heatmap_save_name))
-        
-        if heatmap_args.save_orig:
-            if heatmap_args.vis_level >= 0:
-                vis_level = heatmap_args.vis_level
-            else:
-                vis_level = vis_params['vis_level']
-            heatmap_save_name = '{}_orig_{}.{}'.format(slide_id,int(vis_level), heatmap_args.save_ext)
             if os.path.isfile(os.path.join(p_slide_save_dir, heatmap_save_name)):
+                print(f"Heatmap already exists: {os.path.join(p_slide_save_dir, heatmap_save_name)}")
+                continue # Skip if heatmap already exists
+
+
+            if heatmap_args.use_roi:
+                x1, x2 = process_stack.loc[i, 'x1'], process_stack.loc[i, 'x2']
+                y1, y2 = process_stack.loc[i, 'y1'], process_stack.loc[i, 'y2']
+                top_left = (int(x1), int(y1))
+                bot_right = (int(x2), int(y2))
+            else:
+                top_left = None
+                bot_right = None
+            
+            print('slide id: ', slide_id)
+            print('top left: ', top_left, ' bot right: ', bot_right)
+
+            if isinstance(data_args.data_dir, str):
+                slide_path = os.path.join(data_args.data_dir, slide_name)
+            elif isinstance(data_args.data_dir, dict):
+                data_dir_key = process_stack.loc[i, data_args.data_dir_key]
+                slide_path = os.path.join(data_args.data_dir[data_dir_key], slide_name)
+            else:
+                raise NotImplementedError
+
+            mask_file = os.path.join(r_slide_save_dir, slide_id+'_mask.pkl')
+            
+            # Load segmentation and filter parameters
+            seg_params = def_seg_params.copy()
+            filter_params = def_filter_params.copy()
+            vis_params = def_vis_params.copy()
+
+            seg_params = load_params(process_stack.loc[i], seg_params)
+            filter_params = load_params(process_stack.loc[i], filter_params)
+            vis_params = load_params(process_stack.loc[i], vis_params)
+
+            keep_ids = str(seg_params['keep_ids'])
+            if len(keep_ids) > 0 and keep_ids != 'none':
+                seg_params['keep_ids'] = np.array(keep_ids.split(',')).astype(int)
+            else:
+                seg_params['keep_ids'] = []
+
+            exclude_ids = str(seg_params['exclude_ids'])
+            if len(exclude_ids) > 0 and exclude_ids != 'none':
+                seg_params['exclude_ids'] = np.array(exclude_ids.split(',')).astype(int)
+            else:
+                seg_params['exclude_ids'] = []
+
+            for key, val in seg_params.items():
+                print('{}: {}'.format(key, val))
+
+            for key, val in filter_params.items():
+                print('{}: {}'.format(key, val))
+
+            for key, val in vis_params.items():
+                print('{}: {}'.format(key, val))
+            
+            print('Initializing WSI object')
+            wsi_object = initialize_wsi(slide_path, seg_mask_path=mask_file, seg_params=seg_params, filter_params=filter_params)
+            print('Done!')
+
+            wsi_ref_downsample = wsi_object.level_downsamples[patch_args.patch_level]
+
+            # the actual patch size for heatmap visualization should be the patch size * downsample factor * custom downsample factor
+            vis_patch_size = tuple((np.array(patch_size) * np.array(wsi_ref_downsample) * patch_args.custom_downsample).astype(int))
+
+            block_map_save_path = os.path.join(r_slide_save_dir, '{}_blockmap.h5'.format(slide_id))
+            mask_path = os.path.join(r_slide_save_dir, '{}_mask.jpg'.format(slide_id))
+            if vis_params['vis_level'] < 0:
+                best_level = wsi_object.wsi.get_best_level_for_downsample(32)
+                vis_params['vis_level'] = best_level
+            mask = wsi_object.visWSI(**vis_params, number_contours=True)
+            mask.save(mask_path)
+            
+            h5_path = os.path.join(r_slide_save_dir, slide_id + '.h5')
+
+            # Core logic to secure the feature file
+            if not os.path.isfile(h5_path):
+                source_h5_path = None
+                if h5_files_dir:
+                    source_h5_path = os.path.join(h5_files_dir, slide_id + '.h5')
+
+                if source_h5_path and os.path.isfile(source_h5_path):
+                    print(f"Found features in central repo: {source_h5_path}. Copying...")
+                    shutil.copy(source_h5_path, h5_path)
+                elif enable_feat_ext:
+                    print(f"Features not found for {slide_id}. Computing from WSI...")
+                    if feature_extractor is None:
+                        print("ERROR: Feature extraction enabled, but extractor not initialized. Skipping.")
+                        continue
+                    
+                    _, _, wsi_object = compute_from_patches(
+                        wsi_object=wsi_object, 
+                        model=model,
+                        feature_extractor=feature_extractor, 
+                        img_transforms=img_transforms,
+                        batch_size=exp_args.batch_size, 
+                        **blocky_wsi_kwargs, 
+                        feat_save_path=h5_path
+                    )
+                else:
+                    print(f"Feature file {slide_id}.h5 not found and feature extraction is disabled. Skipping slide.")
+                    continue
+            
+            # Load features and run inference
+            try:
+                with h5py.File(h5_path, "r") as file:
+                    features = torch.tensor(file['features'][:])
+            except Exception as e:
+                print(f"Failed to read {h5_path}. Error: {e}. Skipping.")
+                continue
+            
+            process_stack.loc[i, 'bag_size'] = len(features)
+            
+            wsi_object.saveSegmentation(mask_file)
+            Y_hats, Y_hats_str, Y_probs, A = infer_single_slide(model, features, label, reverse_label_dict, exp_args.n_classes)
+            del features
+            
+            if not os.path.isfile(block_map_save_path):
+                with h5py.File(h5_path, 'r') as hf:
+                    coords = hf['coords'][:]
+                asset_dict = {'attention_scores': A, 'coords': coords}
+                block_map_save_path = save_hdf5(block_map_save_path, asset_dict, mode='w')
+            
+            # save top 3 predictions
+            for c in range(exp_args.n_classes):
+                process_stack.loc[i, 'Pred_{}'.format(c)] = Y_hats_str[c]
+                process_stack.loc[i, 'p_{}'.format(c)] = Y_probs[c]
+
+            os.makedirs('heatmaps/results/', exist_ok=True)
+            if data_args.process_list is not None:
+                process_stack.to_csv('heatmaps/results/{}.csv'.format(data_args.process_list.replace('.csv', '')), index=False)
+            else:
+                process_stack.to_csv('heatmaps/results/{}.csv'.format(exp_args.save_exp_code), index=False)
+            
+            file = h5py.File(block_map_save_path, 'r')
+            dset = file['attention_scores']
+            coord_dset = file['coords']
+            scores = dset[:]
+            coords = coord_dset[:]
+            file.close()
+
+            samples = sample_args.samples
+            for sample in samples:
+                if sample['sample']:
+                    tag = "label_{}_pred_{}".format(label, Y_hats[0])
+                    sample_save_dir =  os.path.join(exp_args.production_save_dir, exp_args.save_exp_code, 'sampled_patches', str(tag), sample['name'])
+                    os.makedirs(sample_save_dir, exist_ok=True)
+                    print('sampling {}'.format(sample['name']))
+                    sample_results = sample_rois(scores, coords, k=sample['k'], mode=sample['mode'], seed=sample['seed'], 
+                        score_start=sample.get('score_start', 0), score_end=sample.get('score_end', 1))
+                    for idx, (s_coord, s_score) in enumerate(zip(sample_results['sampled_coords'], sample_results['sampled_scores'])):
+                        print('coord: {} score: {:.3f}'.format(s_coord, s_score))
+                        patch = wsi_object.wsi.read_region(tuple(s_coord), patch_args.patch_level, (patch_args.patch_size, patch_args.patch_size)).convert('RGB')
+                        patch.save(os.path.join(sample_save_dir, '{}_{}_x_{}_y_{}_a_{:.3f}.png'.format(idx, slide_id, s_coord[0], s_coord[1], s_score)))
+
+            wsi_kwargs = {'top_left': top_left, 'bot_right': bot_right, 'patch_size': patch_size, 'step_size': step_size, 
+            'custom_downsample':patch_args.custom_downsample, 'level': patch_args.patch_level, 'use_center_shift': heatmap_args.use_center_shift}
+
+            heatmap_save_name = '{}_blockmap.tiff'.format(slide_id)
+            if os.path.isfile(os.path.join(r_slide_save_dir, heatmap_save_name)):
                 pass
             else:
-                heatmap = wsi_object.visWSI(vis_level=vis_level, view_slide_only=True, custom_downsample=heatmap_args.custom_downsample)
+                heatmap = drawHeatmap(
+                    scores, 
+                    coords, 
+                    slide_path, 
+                    wsi_object=wsi_object, 
+                    cmap=heatmap_args.cmap, 
+                    alpha=heatmap_args.alpha, 
+                    use_holes=True, 
+                    binarize=False, 
+                    vis_level=-1, 
+                    blank_canvas=False,
+                    thresh=-1, 
+                    patch_size = vis_patch_size, 
+                    convert_to_percentiles=True
+                )
+            
+                heatmap.save(os.path.join(r_slide_save_dir, '{}_blockmap.png'.format(slide_id)))
+                del heatmap
+
+            heatmap_vis_args = {'convert_to_percentiles': False, 'vis_level': heatmap_args.vis_level, 'blur': heatmap_args.blur, 'custom_downsample': heatmap_args.custom_downsample}
+            if heatmap_args.use_ref_scores:
+                heatmap_vis_args['convert_to_percentiles'] = True
+
+            heatmap_save_name = '{}_{}_roi_{}_blur_{}_rs_{}_bc_{}_a_{}_l_{}_bi_{}_{}.{}'.format(slide_id, float(patch_args.overlap), int(heatmap_args.use_roi),
+                                                                                            int(heatmap_args.blur), 
+                                                                                            int(heatmap_args.use_ref_scores), int(heatmap_args.blank_canvas), 
+                                                                                            float(heatmap_args.alpha), int(heatmap_args.vis_level), 
+                                                                                            int(heatmap_args.binarize), float(heatmap_args.binary_thresh), heatmap_args.save_ext)
+
+
+            if os.path.isfile(os.path.join(p_slide_save_dir, heatmap_save_name)):
+                pass
+            
+            else:                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
+                heatmap = drawHeatmap(
+                    scores, 
+                    coords, 
+                    slide_path, 
+                    wsi_object=wsi_object,  
+                    cmap=heatmap_args.cmap, alpha=heatmap_args.alpha, **heatmap_vis_args, 
+                    blank_canvas=heatmap_args.blank_canvas,
+                    patch_size = vis_patch_size,
+                    overlap=patch_args.overlap, 
+                    top_left=top_left, bot_right = bot_right,
+                )
                 if heatmap_args.save_ext == 'jpg':
                     heatmap.save(os.path.join(p_slide_save_dir, heatmap_save_name), quality=100)
                 else:
                     heatmap.save(os.path.join(p_slide_save_dir, heatmap_save_name))
+            
+            if heatmap_args.save_orig:
+                if heatmap_args.vis_level >= 0:
+                    vis_level = heatmap_args.vis_level
+                else:
+                    vis_level = vis_params['vis_level']
+                heatmap_save_name = '{}_orig_{}.{}'.format(slide_id,int(vis_level), heatmap_args.save_ext)
+                if os.path.isfile(os.path.join(p_slide_save_dir, heatmap_save_name)):
+                    pass
+                else:
+                    heatmap = wsi_object.visWSI(vis_level=vis_level, view_slide_only=True, custom_downsample=heatmap_args.custom_downsample)
+                    if heatmap_args.save_ext == 'jpg':
+                        heatmap.save(os.path.join(p_slide_save_dir, heatmap_save_name), quality=100)
+                    else:
+                        heatmap.save(os.path.join(p_slide_save_dir, heatmap_save_name))
+        except Exception as e:
+            print(f"Error processing {slide_name}: {e}")
+            continue
 
     with open(os.path.join(exp_args.raw_save_dir, exp_args.save_exp_code, 'config.yaml'), 'w') as outfile:
         yaml.dump(config_dict, outfile, default_flow_style=False)
