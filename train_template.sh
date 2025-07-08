@@ -174,3 +174,9 @@ CUDA_VISIBLE_DEVICES=0 python main.py \
 # Job for pathology_sufficiency_subtyping, no pos embed:
 
 # sbatch train_template.sh --task pathology_sufficiency_subtyping --exp_code sufficiency_subtyping --model_type clam_mb --data_root_dir /scratch/alpine/$USER/pave_training
+
+
+
+# Job for pathology_management:
+
+# sbatch train_template.sh --task pathology_management --exp_code management --model_type clam_sb --data_root_dir /scratch/alpine/$USER/pave_training

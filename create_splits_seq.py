@@ -80,6 +80,17 @@ elif args.task == 'pathology_normalcy':
                             label_dict = {'normal':0, 'abnormal':1},
                             patient_strat=False,
                             ignore=[])
+
+elif args.task == 'pathology_management':
+    args.n_classes=2
+    dataset = Generic_WSI_Classification_Dataset(csv_path = 'dataset_csv/pathology_management.csv',
+                            shuffle = False, 
+                            seed = args.seed, 
+                            print_info = True,
+                            label_dict = {'follow_up':0, 'treatment':1},
+                            patient_strat=False,
+                            ignore=[],)
+
 else:
     raise NotImplementedError
 
