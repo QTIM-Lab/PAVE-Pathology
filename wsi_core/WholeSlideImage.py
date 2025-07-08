@@ -494,7 +494,8 @@ class WholeSlideImage(object):
                    binarize=False, thresh=0.5,
                    max_size=None,
                    custom_downsample = 1,
-                   cmap='coolwarm'):
+                   cmap='coolwarm',
+                   block_size=1024):
 
         """
         Args:
@@ -566,102 +567,88 @@ class WholeSlideImage(object):
 
         scores /= 100
         
-        ######## calculate the heatmap of raw attention scores (before colormap) 
-        # by accumulating scores over overlapped regions ######
-        
-        # heatmap overlay: tracks attention score over each pixel of heatmap
-        # overlay counter: tracks how many times attention score is accumulated over each pixel of heatmap
-        overlay = np.full(np.flip(region_size), 0).astype(float)
-        counter = np.full(np.flip(region_size), 0).astype(np.uint16)      
-        count = 0
-        for idx in range(len(coords)):
-            score = scores[idx]
-            coord = coords[idx]
-            if score >= threshold:
-                if binarize:
-                    score=1.0
-                    count+=1
-            else:
-                score=0.0
-            # accumulate attention
-            overlay[coord[1]:coord[1]+patch_size[1], coord[0]:coord[0]+patch_size[0]] += score
-            # accumulate counter
-            counter[coord[1]:coord[1]+patch_size[1], coord[0]:coord[0]+patch_size[0]] += 1
-
-        if binarize:
-            print('\nbinarized tiles based on cutoff of {}'.format(threshold))
-            print('identified {}/{} patches as positive'.format(count, len(coords)))
-        
-        # fetch attended region and average accumulated attention
-        zero_mask = counter == 0
-
-        if binarize:
-            overlay[~zero_mask] = np.around(overlay[~zero_mask] / counter[~zero_mask])
-        else:
-            overlay[~zero_mask] = overlay[~zero_mask] / counter[~zero_mask]
-        del counter 
-        if blur:
-            overlay = cv2.GaussianBlur(overlay,tuple((patch_size * (1-overlap)).astype(int) * 2 +1),0)  
-
         if segment:
             tissue_mask = self.get_seg_mask(region_size, scale, use_holes=use_holes, offset=tuple(top_left))
-            # return Image.fromarray(tissue_mask) # tissue mask
         
         if not blank_canvas:
             # downsample original image and use as canvas
             img = np.array(self.wsi.read_region(top_left, vis_level, region_size).convert("RGB"))
         else:
             # use blank canvas
-            img = np.array(Image.new(size=region_size, mode="RGB", color=(255,255,255))) 
+            img = np.array(Image.new(size=region_size, mode="RGB", color=canvas_color))
 
-        #return Image.fromarray(img) #raw image
-
-        print('\ncomputing heatmap image')
-        print('total of {} patches'.format(len(coords)))
-        twenty_percent_chunk = max(1, int(len(coords) * 0.2))
-
-        if isinstance(cmap, str):
-            cmap = plt.get_cmap(cmap)
+        # Process the heatmap in blocks
+        block_size_x = min(block_size, w)
+        block_size_y = min(block_size, h)
         
-        for idx in range(len(coords)):
-            if (idx + 1) % twenty_percent_chunk == 0:
-                print('progress: {}/{}'.format(idx, len(coords)))
-            
-            score = scores[idx]
-            coord = coords[idx]
-            if score >= threshold:
+        for y_start in range(0, h, block_size_y):
+            for x_start in range(0, w, block_size_x):
+                # Define the current block
+                x_end = min(x_start + block_size_x, w)
+                y_end = min(y_start + block_size_y, h)
+                block_region_size = (x_end - x_start, y_end - y_start)
 
-                # attention block
-                raw_block = overlay[coord[1]:coord[1]+patch_size[1], coord[0]:coord[0]+patch_size[0]]
+                # Find scores and coords that fall within the current block
+                block_coords_mask = (coords[:, 0] >= x_start) & (coords[:, 0] < x_end) & \
+                                    (coords[:, 1] >= y_start) & (coords[:, 1] < y_end)
                 
-                # image block (either blank canvas or orig image)
-                img_block = img[coord[1]:coord[1]+patch_size[1], coord[0]:coord[0]+patch_size[0]].copy()
+                block_scores = scores[block_coords_mask]
+                if len(block_scores) == 0:
+                    continue
+                
+                block_coords = coords[block_coords_mask] - np.array([x_start, y_start])
 
-                # color block (cmap applied to attention block)
-                color_block = (cmap(raw_block) * 255)[:,:,:3].astype(np.uint8)
+                # Create overlay and counter for the block
+                overlay_block = np.full(np.flip(block_region_size), 0).astype(float)
+                counter_block = np.full(np.flip(block_region_size), 0).astype(np.uint16)
+                
+                # Accumulate scores in the block
+                for idx in range(len(block_coords)):
+                    score = block_scores[idx]
+                    coord = block_coords[idx]
+                    
+                    if score >= threshold:
+                        if binarize:
+                            score = 1.0
+                        
+                        y_patch_end = coord[1] + patch_size[1]
+                        x_patch_end = coord[0] + patch_size[0]
+                        
+                        if y_patch_end > block_region_size[1]:
+                            y_patch_end = block_region_size[1]
+                        if x_patch_end > block_region_size[0]:
+                            x_patch_end = block_region_size[0]
 
-                if segment:
-                    # tissue mask block
-                    mask_block = tissue_mask[coord[1]:coord[1]+patch_size[1], coord[0]:coord[0]+patch_size[0]] 
-                    # copy over only tissue masked portion of color block
-                    img_block[mask_block] = color_block[mask_block]
+                        overlay_block[coord[1]:y_patch_end, coord[0]:x_patch_end] += score
+                        counter_block[coord[1]:y_patch_end, coord[0]:x_patch_end] += 1
+                
+                # Average the accumulated scores
+                zero_mask_block = counter_block == 0
+                if binarize:
+                    overlay_block[~zero_mask_block] = np.around(overlay_block[~zero_mask_block] / counter_block[~zero_mask_block])
                 else:
-                    # copy over entire color block
-                    img_block = color_block
+                    overlay_block[~zero_mask_block] = overlay_block[~zero_mask_block] / counter_block[~zero_mask_block]
+                
+                # Get the image block to be modified
+                img_block = img[y_start:y_end, x_start:x_end]
 
-                # rewrite image block
-                img[coord[1]:coord[1]+patch_size[1], coord[0]:coord[0]+patch_size[0]] = img_block.copy()
+                # Apply colormap
+                if isinstance(cmap, str):
+                    cmap = plt.get_cmap(cmap)
+                color_block = (cmap(overlay_block) * 255)[:,:,:3].astype(np.uint8)
+                
+                if segment:
+                    mask_block = tissue_mask[y_start:y_end, x_start:x_end]
+                    img_block_blended = cv2.addWeighted(color_block, alpha, img_block, 1 - alpha, 0)
+                    img_block[mask_block] = img_block_blended[mask_block]
+                else:
+                    img_block = cv2.addWeighted(color_block, alpha, img_block, 1 - alpha, 0)
+                
+                img[y_start:y_end, x_start:x_end] = img_block
         
-        #return Image.fromarray(img) #overlay
-        print('Done')
-        del overlay
-
         if blur:
             img = cv2.GaussianBlur(img,tuple((patch_size * (1-overlap)).astype(int) * 2 +1),0)  
 
-        if alpha < 1.0:
-            img = self.block_blending(img, vis_level, top_left, bot_right, alpha=alpha, blank_canvas=blank_canvas, block_size=1024)
-        
         img = Image.fromarray(img)
         w, h = img.size
 
