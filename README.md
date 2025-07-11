@@ -1,4 +1,4 @@
-# PAVE Pathology
+![PAVE Pathology](pave_pathology.png)
 
 This repository contains scripts and templates for running segmentation and patching, feature extraction, and model training on whole slide images (WSIs) for the PAVE Pathology project. The workflow includes shell scripts designed for SLURM job scheduling. The workflow was designed to run on the Alpine HPC from CU Boulder, hence the default file path structure.
 
