@@ -24,19 +24,19 @@ It is _vital_ to run `remove_unconsented.sh` to ensure that all the WSIs corresp
 
 ```
 navyblue/
-	├── A
+   ├── A
       └── wsis
          ├── PATH000000001.svs
          ├── PATH000000002.svs
          ├── ...
          └── PATH000000300.svs
-	├── B
+   ├── B
       └── wsis
          ├── PATH000000301.svs
          ├── PATH000000302.svs
          ├── ...
          └── PATH000000600.svs
-	├── C
+   ├── C
       └── wsis
          ├── PATH000000601.svs
          ├── PATH000000602.svs
