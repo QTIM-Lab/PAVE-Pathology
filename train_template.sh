@@ -27,7 +27,7 @@ sbatch train_template.sh --task pathology_normalcy --exp_code normalcy_pos --mod
 
 sbatch train_template.sh --task pathology_sufficiency --exp_code sufficiency_pos --model_type clam_sb --data_root_dir /scratch/alpine/$USER/pave_training --use_pos_embed
 
-batch train_template.sh --task pathology_full_subtyping --exp_code full_subtyping_pos --data_root_dir /scratch/alpine/$USER/pave_training --use_pos_embed
+sbatch train_template.sh --task pathology_full_subtyping --exp_code full_subtyping_pos --data_root_dir /scratch/alpine/$USER/pave_training --use_pos_embed
 
 sbatch train_template.sh --task pathology_sufficiency_subtyping --exp_code sufficiency_subtyping_pos --model_type clam_mb --data_root_dir /scratch/alpine/$USER/pave_training --use_pos_embed
 sbatch train_template.sh --task pathology_sufficiency_subtyping --exp_code sufficiency_subtyping --model_type clam_mb --data_root_dir /scratch/alpine/$USER/pave_training
