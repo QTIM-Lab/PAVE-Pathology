@@ -14,6 +14,13 @@
 #SBATCH --mail-user=aiden.taghinia@cuanschutz.edu
 #SBATCH --mail-type=END
 
+: <<'end_comment'
+
+This script is used to extract features from a given directory, which typically is a lettered subdirectory of 300 WSIs.
+
+end_comment
+
+
 echo "Extracting features for ${1}"
 
 module load miniforge

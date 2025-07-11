@@ -14,6 +14,28 @@
 #SBATCH --mail-user=aiden.taghinia@cuanschutz.edu
 #SBATCH --mail-type=END
 
+: <<'end_comment'
+
+This script is used to train a model on a given task with a given set of hyperparameters.
+The arguments to this script are the same as the arguments to main.py itself, i.e., one could replace `sbatch train_template.sh` with `python main.py` 
+(with a few desired defaults, e.g. --weighted_sample --early_stopping --log_data)
+
+Sample uses are given below:
+
+sbatch train_template.sh --task pathology_normalcy --exp_code normalcy_pos --model_type clam_sb --data_root_dir /scratch/alpine/$USER/pave_training --use_pos_embed --lr 1e-4 --reg 1e-5
+sbatch train_template.sh --task pathology_normalcy --exp_code normalcy_pos --model_type clam_sb --data_root_dir /scratch/alpine/$USER/pave_training --use_pos_embed
+
+sbatch train_template.sh --task pathology_sufficiency --exp_code sufficiency_pos --model_type clam_sb --data_root_dir /scratch/alpine/$USER/pave_training --use_pos_embed
+
+batch train_template.sh --task pathology_full_subtyping --exp_code full_subtyping_pos --data_root_dir /scratch/alpine/$USER/pave_training --use_pos_embed
+
+sbatch train_template.sh --task pathology_sufficiency_subtyping --exp_code sufficiency_subtyping_pos --model_type clam_mb --data_root_dir /scratch/alpine/$USER/pave_training --use_pos_embed
+sbatch train_template.sh --task pathology_sufficiency_subtyping --exp_code sufficiency_subtyping --model_type clam_mb --data_root_dir /scratch/alpine/$USER/pave_training
+
+sbatch train_template.sh --task pathology_management --exp_code management --model_type clam_sb --data_root_dir /scratch/alpine/$USER/pave_training
+
+end_comment
+
 # Parse command line arguments
 echo "Parsing command line arguments"
 while [[ $# -gt 0 ]]; do
@@ -131,52 +153,3 @@ CUDA_VISIBLE_DEVICES=0 python main.py \
    $( [ "$SUBTYPING" = "True" ] && echo "--subtyping" ) \
    $( [ "$USE_POS_EMBED" = "True" ] && echo "--use_pos_embed" ) \
    $ADDITIONAL_ARGS
-
-
-# source train_template.sh --task pathology_sufficiency --exp_code sufficiency_pos --model_type clam_sb --data_root_dir /scratch/alpine/$USER/pave_training --use_pos_embed
-
-
-# Run interactively:
-
-# CUDA_VISIBLE_DEVICES=0 python main.py --task pathology_sufficiency --exp_code sufficiency_pos --model_type clam_sb --data_root_dir /scratch/alpine/$USER/pave_training --k 1 --drop_out 0.25 --lr 1e-5 --reg 1e-6 --max_epochs 100 --bag_loss ce --inst_loss svm --embed_dim 1024 --use_pos_embed --weighted_sample --early_stopping --log_data
-
-
-# Job for pathology_normalcy, default hyperparameters:
-
-# sbatch train_template.sh --task pathology_normalcy --exp_code normalcy_pos --model_type clam_sb --data_root_dir /scratch/alpine/$USER/pave_training --use_pos_embed --lr 1e-4 --reg 1e-5
-
-
-# Job for pathology_normalcy, tuned hyperparameters:
-
-# sbatch train_template.sh --task pathology_normalcy --exp_code normalcy_pos --model_type clam_sb --data_root_dir /scratch/alpine/$USER/pave_training --use_pos_embed
-
-
-# Job for pathology_sufficiency, tuned hyperparameters:
-
-# sbatch train_template.sh --task pathology_sufficiency --exp_code sufficiency_pos --model_type clam_sb --data_root_dir /scratch/alpine/$USER/pave_training --use_pos_embed
-
-
-# Job for pathology_full_subtyping, tuned hyperparameters:
-
-# sbatch train_template.sh --task pathology_full_subtyping --exp_code full_subtyping_pos --data_root_dir /scratch/alpine/$USER/pave_training --use_pos_embed
-
-
-# Job for pathology_sufficiency_multi_label, tuned hyperparameters:
-
-# sbatch train_template.sh --task pathology_sufficiency_multi_label --exp_code sufficiency_multi_label_pos --model_type clam_mb --data_root_dir /scratch/alpine/$USER/pave_training --use_pos_embed --multi_label
-
-
-
-# Job for pathology_sufficiency_subtyping, pos embed:
-
-# sbatch train_template.sh --task pathology_sufficiency_subtyping --exp_code sufficiency_subtyping_pos --model_type clam_mb --data_root_dir /scratch/alpine/$USER/pave_training --use_pos_embed
-
-# Job for pathology_sufficiency_subtyping, no pos embed:
-
-# sbatch train_template.sh --task pathology_sufficiency_subtyping --exp_code sufficiency_subtyping --model_type clam_mb --data_root_dir /scratch/alpine/$USER/pave_training
-
-
-
-# Job for pathology_management:
-
-# sbatch train_template.sh --task pathology_management --exp_code management --model_type clam_sb --data_root_dir /scratch/alpine/$USER/pave_training

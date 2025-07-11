@@ -2,6 +2,13 @@ import os
 from pathlib import Path
 from tqdm import tqdm # For a nice progress bar (install with: pip install tqdm)
 
+""" 
+This script is used to create symlinks for all the pt, h5, and svs files that appear distributed across subdirectories (for parallel processing) in a single directory.
+They have been spilt up into batches of 300 files each, lettered A-Z, for segmentation, patching, and feature extraction.
+But since the training and evaluation scripts expect all the files to be in a single directory, we need to create symlinks to the files in the data_root_dir.
+"""
+
+
 def consolidate_files_with_symlinks(
     data_root_dir="/scratch/alpine/ataghinia@xsede.org/", 
     consolidated_folder_base="/scratch/alpine/ataghinia@xsede.org/pave_training/pathology_features/"
@@ -82,20 +89,3 @@ def consolidate_files_with_symlinks(
 # --- How to use this function ---
 if __name__ == "__main__":
     consolidate_files_with_symlinks()
-
-    # --- Next steps after running this script ---
-    # 1. AFTER you have run this script and created the consolidated_pt_files directory,
-    #    you will use this NEW directory for your `data_dir` argument.
-
-    # 2. Update your `csv_path` as before to refer to your main dataset CSV.
-    #    (You might still need to filter your CSV based on the files *now* present in the consolidated folder).
-
-    # 3. When you run your training/evaluation scripts (e.g., main.py, eval.py),
-    #    you will point `--data_root_dir` to the PARENT of your `consolidated_pt_files` folder (which is `MY_DATA_ROOT_DIR` itself in this setup if `consolidated_pt_files` is directly under it).
-    #    And the `Generic_MIL_Dataset`'s `data_dir` argument will point to the `consolidated_pt_files` folder.
-
-    # Example for main.py (adjusting as necessary based on your script's structure):
-    # If `args.data_root_dir` points to the *parent* of `consolidated_pt_files`,
-    # then `data_dir` in Generic_MIL_Dataset would be:
-    # `data_dir = os.path.join(args.data_root_dir, 'consolidated_pt_files')`
-    # or simply `data_dir = '/path/to/your/DATA_ROOT_DIR/consolidated_pt_files'`

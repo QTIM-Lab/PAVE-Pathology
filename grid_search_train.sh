@@ -1,7 +1,12 @@
 #!/bin/bash
 
-# Grid search script for hyperparameter tuning
-# Iterates through combinations of lr, weight decay (reg), and dropout values
+: <<'end_comment'
+
+This script is used to grid search hyperparameter tuning for a given task.
+It iterates through combinations of lr, weight decay (reg), and dropout values.
+
+end_comment
+
 
 # Define the hyperparameter values to search over
 LR_VALUES=("1e-5" "1e-4" "1e-3")

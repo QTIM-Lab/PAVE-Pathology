@@ -3,16 +3,37 @@
 #SBATCH --nodes=1
 #SBATCH --qos=normal
 #SBATCH --partition=aa100,al40
-# #SBATCH --mem=128GB
 #SBATCH --gres=gpu:1
 #SBATCH --ntasks=16
-#SBATCH --time=23:59:00
+#SBATCH --time=00:30:00
 #SBATCH --account=amc-general
 #SBATCH --job-name=eval_template
 #SBATCH --output="job_logs/eval_template_%J.log"
 #SBATCH --error="job_logs/eval_template_%J.err"
 #SBATCH --mail-user=aiden.taghinia@cuanschutz.edu
 #SBATCH --mail-type=END
+
+: <<'end_comment'
+
+This script is used to evaluate a model on a given task with a given set of hyperparameters.
+The arguments to this script are the same as the arguments to eval.py itself, i.e., one could replace `source/sbatch eval_template.sh` with `python eval.py`.
+
+Sample uses are given below:
+
+sbatch eval_template.sh --task pathology_normalcy --models_exp_code normalcy_1_s1 --save_exp_code normalcy_val --model_type clam_sb --split val
+sbatch eval_template.sh --task pathology_normalcy --models_exp_code normalcy_1_s1 --save_exp_code normalcy_test --model_type clam_sb --split test --threshold 0.06
+
+sbatch eval_template.sh --task pathology_sufficiency --models_exp_code sufficiency_1_s1 --save_exp_code sufficiency_val --model_type clam_sb --split val
+sbatch eval_template.sh --task pathology_sufficiency --models_exp_code sufficiency_1_s1 --save_exp_code sufficiency_test --model_type clam_sb --split test --threshold 0.8
+
+sbatch eval_template.sh --task pathology_sufficiency_subtyping --models_exp_code sufficiency_subtyping_s1 --save_exp_code sufficiency_subtyping_val --model_type clam_mb --split val
+sbatch eval_template.sh --task pathology_sufficiency_subtyping --models_exp_code sufficiency_subtyping_s1 --save_exp_code sufficiency_subtyping_test --model_type clam_mb --split test --threshold ???
+
+sbatch eval_template.sh --task pathology_management --models_exp_code management_s1 --save_exp_code management_val --model_type clam_sb --split val
+sbatch eval_template.sh --task pathology_management --models_exp_code management_s1 --save_exp_code management_test --model_type clam_sb --split test --threshold  0.03
+
+end_comment
+
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -108,32 +129,7 @@ python eval.py \
    $THRESHOLD_ARG \
    $ADDITIONAL_ARGS
 
-# Example usage:
 
-# source eval_template.sh --task pathology_normalcy --models_exp_code normalcy_1_s1 --save_exp_code normalcy_0.08 --model_type clam_sb --threshold 0.08
-
-# source eval_template.sh --task pathology_normalcy --models_exp_code normalcy_1_s1 --save_exp_code normalcy_0.02 --model_type clam_sb --threshold 0.02
-
-# source eval_template.sh --task pathology_normalcy --models_exp_code normalcy_1_s1 --save_exp_code normalcy_0.01 --model_type clam_sb --threshold 0.01
-
-
-# VAL THEN TEST
-
-
-# sbatch eval_template.sh --task pathology_normalcy --models_exp_code normalcy_1_s1 --save_exp_code normalcy_val --model_type clam_sb --split val
-
-# sbatch eval_template.sh --task pathology_normalcy --models_exp_code normalcy_1_s1 --save_exp_code normalcy_test --model_type clam_sb --split test --threshold ???
-
-
-
-# sbatch eval_template.sh --task pathology_sufficiency --models_exp_code sufficiency_1_s1 --save_exp_code sufficiency_val --model_type clam_sb --split val
-
-# sbatch eval_template.sh --task pathology_sufficiency --models_exp_code sufficiency_1_s1 --save_exp_code sufficiency_test --model_type clam_sb --split test --threshold ???
-
-
-# sbatch eval_template.sh --task pathology_sufficiency_subtyping --models_exp_code sufficiency_subtyping_s1 --save_exp_code sufficiency_subtyping_val --model_type clam_mb --split val
-
-# sbatch eval_template.sh --task pathology_sufficiency_subtyping --models_exp_code sufficiency_subtyping_s1 --save_exp_code sufficiency_subtyping_test --model_type clam_mb --split test --threshold ???
 
 
 
