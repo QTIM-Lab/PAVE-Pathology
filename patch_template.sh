@@ -12,6 +12,13 @@
 #SBATCH --mail-user=aiden.taghinia@cuanschutz.edu
 #SBATCH --mail-type=END
 
+: <<'end_comment'
+
+This script is used to segment and patch a given directory, which typically is a lettered subdirectory of 300 WSIs.
+
+end_comment
+
+
 echo "Segmenting and patching for ${1}"
 
 module load miniforge

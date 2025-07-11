@@ -4,6 +4,22 @@ import torch.nn.functional as F
 import numpy as np
 import pdb
 
+class PositionalEmbedding(nn.Module):
+    def __init__(self, embed_dim=256, n_coords=2):
+        super().__init__()
+        self.embedding_layer = nn.Sequential(
+            nn.Linear(n_coords, 128),
+            nn.ReLU(),
+            nn.Linear(128, embed_dim)
+        )
+
+    def forward(self, coords):
+        # Normalize coordinates to be between -1 and 1
+        # Assumes coords are in a [0, max_val] range and shape [batch_size, 2]
+        norm_coords = (coords / (torch.max(coords, dim=1, keepdim=True)[0] + 1e-6)) * 2 - 1
+        pos_embedding = self.embedding_layer(norm_coords)
+        return pos_embedding
+
 """
 Attention Network without Gating (2 fc layers)
 args:
@@ -76,10 +92,16 @@ args:
 """
 class CLAM_SB(nn.Module):
     def __init__(self, gate = True, size_arg = "small", dropout = 0., k_sample=8, n_classes=2,
-        instance_loss_fn=nn.CrossEntropyLoss(), subtyping=False, embed_dim=1024):
+        instance_loss_fn=nn.CrossEntropyLoss(), subtyping=False, embed_dim=1024, use_pos_embed=False):
         super().__init__()
         self.size_dict = {"small": [embed_dim, 512, 256], "big": [embed_dim, 512, 384]}
         size = self.size_dict[size_arg]
+
+        # Positional embedding
+        self.use_pos_embed = use_pos_embed
+        if self.use_pos_embed:
+            self.pos_embed = PositionalEmbedding(embed_dim=size[0])
+
         fc = [nn.Linear(size[0], size[1]), nn.ReLU(), nn.Dropout(dropout)]
         if gate:
             attention_net = Attn_Net_Gated(L = size[1], D = size[2], dropout = dropout, n_classes = 1)
@@ -135,7 +157,14 @@ class CLAM_SB(nn.Module):
         instance_loss = self.instance_loss_fn(logits, p_targets)
         return instance_loss, p_preds, p_targets
 
-    def forward(self, h, label=None, instance_eval=False, return_features=False, attention_only=False):
+    def forward(self, h, coords=None, label=None, instance_eval=False, return_features=False, attention_only=False):
+        
+        if self.use_pos_embed and coords is not None:
+            # Only add positional embeddings if coords are not all zero
+            if not torch.all(coords == 0):
+                pos_embedding = self.pos_embed(coords.float())
+                h = h + pos_embedding
+
         A, h = self.attention_net(h)  # NxK        
         A = torch.transpose(A, 1, 0)  # KxN
         if attention_only:
@@ -182,10 +211,17 @@ class CLAM_SB(nn.Module):
 
 class CLAM_MB(CLAM_SB):
     def __init__(self, gate = True, size_arg = "small", dropout = 0., k_sample=8, n_classes=2,
-        instance_loss_fn=nn.CrossEntropyLoss(), subtyping=False, embed_dim=1024):
+        instance_loss_fn=nn.CrossEntropyLoss(), subtyping=False, embed_dim=1024, use_pos_embed=False):
+        # No super().__init__ call here for CLAM_MB, as it inherits from CLAM_SB but re-initializes everything
         nn.Module.__init__(self)
         self.size_dict = {"small": [embed_dim, 512, 256], "big": [embed_dim, 512, 384]}
         size = self.size_dict[size_arg]
+        
+        # Positional embedding
+        self.use_pos_embed = use_pos_embed
+        if self.use_pos_embed:
+            self.pos_embed = PositionalEmbedding(embed_dim=size[0])
+
         fc = [nn.Linear(size[0], size[1]), nn.ReLU(), nn.Dropout(dropout)]
         if gate:
             attention_net = Attn_Net_Gated(L = size[1], D = size[2], dropout = dropout, n_classes = n_classes)
@@ -202,8 +238,15 @@ class CLAM_MB(CLAM_SB):
         self.n_classes = n_classes
         self.subtyping = subtyping
 
-    def forward(self, h, label=None, instance_eval=False, return_features=False, attention_only=False):
-        A, h = self.attention_net(h)  # NxK        
+    def forward(self, h, coords=None, label=None, instance_eval=False, return_features=False, attention_only=False):
+        
+        if self.use_pos_embed and coords is not None:
+            # Only add positional embeddings if coords are not all zero
+            if not torch.all(coords == 0):
+                pos_embedding = self.pos_embed(coords.float())
+                h = h + pos_embedding
+
+        A, h = self.attention_net(h)  # NxK
         A = torch.transpose(A, 1, 0)  # KxN
         if attention_only:
             return A

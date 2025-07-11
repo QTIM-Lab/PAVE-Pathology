@@ -135,6 +135,8 @@ def train(datasets, cur, args):
         if args.subtyping:
             model_dict.update({'subtyping': True})
         
+        model_dict.update({'use_pos_embed': args.use_pos_embed})
+        
         if args.B > 0:
             model_dict.update({'k_sample': args.B})
         
@@ -175,7 +177,9 @@ def train(datasets, cur, args):
 
     print('\nSetup EarlyStopping...', end=' ')
     if args.early_stopping:
-        early_stopping = EarlyStopping(patience = 20, stop_epoch=50, verbose = True)
+        early_stopping = EarlyStopping(patience = 20, 
+                                       stop_epoch=30, # Lower from 50 to 30, because loss is not improving
+                                       verbose = True)
 
     else:
         early_stopping = None
@@ -241,21 +245,21 @@ def train_loop_clam(epoch, model, loader, optimizer, n_classes, bag_weight, writ
     successful_batches = 0
 
     print('\n')
-    for batch_idx, (data, label) in enumerate(loader):
+    for batch_idx, (data, coords, label) in enumerate(loader):
         try:
-            data, label = data.to(device), label.to(device)
-            logits, Y_prob, Y_hat, _, instance_dict = model(data, label=label, instance_eval=True)
-
+            data, coords, label = data.to(device), coords.to(device), label.to(device)
+            logits, Y_prob, Y_hat, _, instance_dict = model(h=data, coords=coords, label=label, instance_eval=True)
+            
             acc_logger.log(Y_hat, label)
-            loss = loss_fn(logits, label)
-            loss_value = loss.item()
+            loss_bag = loss_fn(logits, label)
+            loss_value = loss_bag.item()
 
             instance_loss = instance_dict['instance_loss']
             inst_count+=1
             instance_loss_value = instance_loss.item()
             train_inst_loss += instance_loss_value
             
-            total_loss = bag_weight * loss + (1-bag_weight) * instance_loss 
+            total_loss = bag_weight * loss_bag + (1-bag_weight) * instance_loss 
 
             inst_preds = instance_dict['inst_preds']
             inst_labels = instance_dict['inst_labels']
@@ -426,14 +430,17 @@ def validate_clam(cur, epoch, model, loader, n_classes, early_stopping = None, w
     labels = np.zeros(len(loader))
     sample_size = model.k_sample
     with torch.inference_mode():
-        for batch_idx, (data, label) in enumerate(loader):
-            data, label = data.to(device), label.to(device)      
-            logits, Y_prob, Y_hat, _, instance_dict = model(data, label=label, instance_eval=True)
+        for batch_idx, (data, coords, label) in enumerate(loader):
+            data, coords, label = data.to(device), coords.to(device), label.to(device)
+
+            with torch.no_grad():
+                logits, Y_prob, Y_hat, _, instance_dict = model(h=data, coords=coords, label=label, instance_eval=True)
+
             acc_logger.log(Y_hat, label)
             
-            loss = loss_fn(logits, label)
+            loss_bag = loss_fn(logits, label)
 
-            val_loss += loss.item()
+            val_loss += loss_bag.item()
 
             instance_loss = instance_dict['instance_loss']
             
@@ -502,33 +509,30 @@ def validate_clam(cur, epoch, model, loader, n_classes, early_stopping = None, w
     return False
 
 def summary(model, loader, n_classes):
-    acc_logger = Accuracy_Logger(n_classes=n_classes)
     model.eval()
-    test_loss = 0.
-    test_error = 0.
+    acc_logger = Accuracy_Logger(n_classes=n_classes)
+    patient_results = {}
 
     all_probs = np.zeros((len(loader), n_classes))
     all_labels = np.zeros(len(loader))
+    all_preds = np.zeros(len(loader))
 
-    slide_ids = loader.dataset.slide_data['slide_id']
-    patient_results = {}
-
-    for batch_idx, (data, label) in enumerate(loader):
-        data, label = data.to(device), label.to(device)
-        slide_id = slide_ids.iloc[batch_idx]
-        with torch.inference_mode():
-            logits, Y_prob, Y_hat, _, _ = model(data)
-
+    for batch_idx, (data, coords, label) in enumerate(loader):
+        data, coords, label = data.to(device), coords.to(device), label.to(device)
+        slide_id = loader.dataset.slide_data['slide_id'][batch_idx]
+        with torch.no_grad():
+            logits, Y_prob, Y_hat, _, _ = model(h=data, coords=coords)
+        
         acc_logger.log(Y_hat, label)
+        
         probs = Y_prob.cpu().numpy()
         all_probs[batch_idx] = probs
         all_labels[batch_idx] = label.item()
+        all_preds[batch_idx] = Y_hat.item()
         
         patient_results.update({slide_id: {'slide_id': np.array(slide_id), 'prob': probs, 'label': label.item()}})
-        error = calculate_error(Y_hat, label)
-        test_error += error
 
-    test_error /= len(loader)
+    test_error = 1.0 - np.sum(np.array(all_preds) == np.array(all_labels)) / len(all_labels)
 
     if n_classes == 2:
         auc = roc_auc_score(all_labels, all_probs[:, 1])

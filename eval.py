@@ -38,10 +38,18 @@ parser.add_argument('--k_end', type=int, default=-1, help='end fold (default: -1
 parser.add_argument('--fold', type=int, default=-1, help='single fold to evaluate')
 parser.add_argument('--micro_average', action='store_true', default=False, 
                     help='use micro_average instead of macro_avearge for multiclass AUC')
-parser.add_argument('--split', type=str, choices=['train', 'val', 'test', 'all'], default='test')
-parser.add_argument('--task', type=str, choices=['task_1_tumor_vs_normal',  'task_2_tumor_subtyping'])
+parser.add_argument('--split', type=str, choices=['train', 'val', 'test', 'all'], default='val')
+parser.add_argument('--task', type=str, choices=[
+    'task_1_tumor_vs_normal', 
+    'task_2_tumor_subtyping', 
+    'pathology_full_subtyping', 
+    'pathology_sufficiency', 
+    'pathology_normalcy',
+    'pathology_sufficiency_subtyping',
+    'pathology_management'])
 parser.add_argument('--drop_out', type=float, default=0.25, help='dropout')
 parser.add_argument('--embed_dim', type=int, default=1024)
+parser.add_argument('--threshold', type=float, default=None, help='decision threshold for binary classification')
 args = parser.parse_args()
 
 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -63,7 +71,8 @@ settings = {'task': args.task,
             'models_dir': args.models_dir,
             'model_type': args.model_type,
             'drop_out': args.drop_out,
-            'model_size': args.model_size}
+            'model_size': args.model_size,
+            'threshold': args.threshold}
 
 with open(args.save_dir + '/eval_experiment_{}.txt'.format(args.save_exp_code), 'w') as f:
     print(settings, file=f)
@@ -90,15 +99,60 @@ elif args.task == 'task_2_tumor_subtyping':
                             patient_strat= False,
                             ignore=[])
 
-# elif args.task == 'tcga_kidney_cv':
-#     args.n_classes=3
-#     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_kidney_clean.csv',
-#                             data_dir= os.path.join(args.data_root_dir, 'tcga_kidney_20x_features'),
-#                             shuffle = False, 
-#                             print_info = True,
-#                             label_dict = {'TCGA-KICH':0, 'TCGA-KIRC':1, 'TCGA-KIRP':2},
-#                             patient_strat= False,
-#                             ignore=['TCGA-SARC'])
+elif args.task == 'pathology_full_subtyping':
+    args.n_classes=5 #6
+    args.label_dict = {'insufficient':0, 'normal':1, 'low_grade':2, 'high_grade':3, 'cancer':4}# 'atypia':5}
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_full_subtyping.csv',
+                            data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
+                            shuffle = False, 
+                            print_info = True,
+                            label_dict = args.label_dict,
+                            patient_strat=False,
+                            ignore=[])
+
+elif args.task == 'pathology_sufficiency':
+    args.n_classes=2
+    args.label_dict = {'insufficient':0, 'sufficient':1}
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_sufficiency.csv',
+                            data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
+                            shuffle = False, 
+                            print_info = True,
+                            label_dict = args.label_dict,
+                            patient_strat=False,
+                            ignore=[])
+
+elif args.task == 'pathology_normalcy':
+    args.n_classes=2
+    args.label_dict = {'normal':0, 'abnormal':1}
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_normalcy.csv',
+                            data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
+                            shuffle = False, 
+                            print_info = True,
+                            label_dict = args.label_dict,
+                            patient_strat=False,
+                            ignore=[])
+
+elif args.task == 'pathology_sufficiency_subtyping':
+    args.n_classes=3
+    args.label_dict = {'sufficient':0, 'blurry':1, 'insufficient':2}
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_sufficiency_subtyping.csv',
+                            data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
+                            shuffle = False, 
+                            print_info = True,
+                            label_dict = args.label_dict,
+                            patient_strat=False,
+                            ignore=[])
+
+elif args.task == 'pathology_management':
+    args.n_classes=2
+    args.label_dict = {'follow_up':0, 'treatment':1}
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_management.csv',
+                            data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
+                            shuffle = False, 
+                            print_info = True,
+                            label_dict = args.label_dict,
+                            patient_strat=False,
+                            ignore=[])
 
 else:
     raise NotImplementedError

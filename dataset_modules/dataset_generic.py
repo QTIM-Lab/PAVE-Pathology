@@ -40,6 +40,7 @@ class Generic_WSI_Classification_Dataset(Dataset):
 		patient_strat=False,
 		label_col = None,
 		patient_voting = 'max',
+		use_h5 = False,
 		):
 		"""
 		Args:
@@ -49,6 +50,7 @@ class Generic_WSI_Classification_Dataset(Dataset):
 			print_info (boolean): Whether to print a summary of the dataset
 			label_dict (dict): Dictionary with key, value pairs for converting str labels to int
 			ignore (list): List containing class labels to ignore
+			use_h5 (boolean): Whether to use h5 files
 		"""
 		self.label_dict = label_dict
 		self.num_classes = len(set(self.label_dict.values()))
@@ -57,6 +59,7 @@ class Generic_WSI_Classification_Dataset(Dataset):
 		self.patient_strat = patient_strat
 		self.train_ids, self.val_ids, self.test_ids  = (None, None, None)
 		self.data_dir = None
+		self.use_h5 = use_h5
 		if not label_col:
 			label_col = 'label'
 		self.label_col = label_col
@@ -319,46 +322,40 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
 	
 		super(Generic_MIL_Dataset, self).__init__(**kwargs)
 		self.data_dir = data_dir
-		self.use_h5 = False
 
 	def load_from_h5(self, toggle):
 		self.use_h5 = toggle
 
 	def __getitem__(self, idx):
+		label = self.getlabel(idx)
 		slide_id = self.slide_data['slide_id'][idx]
-		label = self.slide_data['label'][idx]
-		if type(self.data_dir) == dict:
-			source = self.slide_data['source'][idx]
-			data_dir = self.data_dir[source]
-		else:
-			data_dir = self.data_dir
-
-		if not self.use_h5:
-			if self.data_dir:
-				full_path = os.path.join(data_dir, 'pt_files', '{}.pt'.format(slide_id))
-				if not os.path.exists(full_path):
-					print(f"Warning: File not found: {full_path}")
-					# Return a zero tensor as fallback or skip this sample
-					# You might want to adjust this based on your needs
-					return torch.zeros(1024), label  # Assuming 1024 features
-				features = torch.load(full_path)
-				return features, label
-			
-			else:
-				return slide_id, label
-
-		else:
-			full_path = os.path.join(data_dir,'h5_files','{}.h5'.format(slide_id))
+		
+		if self.use_h5:
+			full_path = os.path.join(self.data_dir, 'h5_files', '{}.h5'.format(slide_id))
 			if not os.path.exists(full_path):
 				print(f"Warning: File not found: {full_path}")
-				# Return a zero tensor as fallback
-				return torch.zeros(1024), label, torch.zeros((0, 2))
-			with h5py.File(full_path,'r') as hdf5_file:
-				features = hdf5_file['features'][:]
-				coords = hdf5_file['coords'][:]
-
+				# Return a zero tensor as fallback or skip this sample
+				# You might want to adjust this based on your needs
+				return torch.zeros(1024), torch.empty(0, 2), label  # Assuming 1024 features
+			
+			with h5py.File(full_path, 'r') as hf:
+				features = hf['features'][:]
+				coords = hf['coords'][:]
+			
 			features = torch.from_numpy(features)
-			return features, label, coords
+			coords = torch.from_numpy(coords)
+			return features, coords, label
+
+		else:
+			full_path = os.path.join(self.data_dir, 'pt_files', slide_id+'.pt')
+			if not os.path.exists(full_path):
+				print(f"Warning: File not found: {full_path}")
+				# Return a zero tensor as fallback or skip this sample
+				# You might want to adjust this based on your needs
+				return torch.zeros(1024), torch.empty(0, 2), label  # Assuming 1024 features
+			features = torch.load(full_path)
+			# Return dummy coordinates if not using H5, to maintain consistent output format
+			return features, torch.empty(0, 2), label
 
 
 class Generic_Split(Generic_MIL_Dataset):

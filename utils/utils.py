@@ -34,8 +34,9 @@ class SubsetSequentialSampler(Sampler):
 
 def collate_MIL(batch):
 	img = torch.cat([item[0] for item in batch], dim = 0)
-	label = torch.LongTensor([item[1] for item in batch])
-	return [img, label]
+	coords = torch.cat([item[1] for item in batch], dim = 0)
+	label = torch.LongTensor([item[2] for item in batch])
+	return [img, coords, label]
 
 def collate_features(batch):
 	img = torch.cat([item[0] for item in batch], dim = 0)
@@ -43,8 +44,8 @@ def collate_features(batch):
 	return [img, coords]
 
 
-def get_simple_loader(dataset, batch_size=1, num_workers=1):
-	kwargs = {'num_workers': 4, 'pin_memory': False, 'num_workers': num_workers} if device.type == "cuda" else {}
+def get_simple_loader(dataset, batch_size=1, num_workers=4):
+	kwargs = {'num_workers': num_workers, 'pin_memory': True} if device.type == "cuda" else {}
 	loader = DataLoader(dataset, batch_size=batch_size, sampler = sampler.SequentialSampler(dataset), collate_fn = collate_MIL, **kwargs)
 	return loader 
 

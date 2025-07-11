@@ -3,7 +3,7 @@
 #SBATCH --nodes=1
 #SBATCH --qos=normal
 #SBATCH --partition=aa100,al40
-#SBATCH --mem=80GB
+#SBATCH --mem=128GB
 #SBATCH --gres=gpu:1
 #SBATCH --ntasks=16
 #SBATCH --time=12:00:00
@@ -13,6 +13,13 @@
 #SBATCH --error="job_logs/feat_ext_%J.err"
 #SBATCH --mail-user=aiden.taghinia@cuanschutz.edu
 #SBATCH --mail-type=END
+
+: <<'end_comment'
+
+This script is used to extract features from a given directory, which typically is a lettered subdirectory of 300 WSIs.
+
+end_comment
+
 
 echo "Extracting features for ${1}"
 

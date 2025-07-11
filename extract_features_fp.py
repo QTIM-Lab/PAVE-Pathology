@@ -66,7 +66,11 @@ if __name__ == '__main__':
 	csv_path = args.csv_path
 	if csv_path is None:
 		raise NotImplementedError
-
+	
+	if not os.path.exists(csv_path):
+		print(f"CSV file not found: {csv_path}, no features to extract.")
+		exit()
+	
 	bags_dataset = Dataset_All_Bags(csv_path)
 
 	df = pd.read_csv(csv_path)
@@ -83,7 +87,7 @@ if __name__ == '__main__':
 	model = model.to(device)
 	total = len(bags_dataset)
 
-	loader_kwargs = {'num_workers': 16, 'pin_memory': True, 'prefetch_factor': 4} if device.type == "cuda" else {} # Changed to 16, make sure reflected in cpus-per-tasks, request max memory (240GB)
+	loader_kwargs = {'num_workers': 8, 'pin_memory': True, 'prefetch_factor': 4} if device.type == "cuda" else {} # Changed to 16, make sure reflected in cpus-per-tasks, request max memory (240GB)
 
 	for bag_candidate_idx in tqdm(range(total)):
 		df.to_csv(os.path.join(args.feat_dir, 'post_feat_ext.csv'), index=False)

@@ -45,6 +45,15 @@ def main(args):
         train_dataset, val_dataset, test_dataset = dataset.return_splits(from_id=False, 
                 csv_path='{}/splits_{}.csv'.format(args.split_dir, i))
         
+        if args.use_pos_embed:
+            print("Positional embedding enabled, switching to H5 files for coordinates.")
+            if train_dataset:
+                train_dataset.load_from_h5(True)
+            if val_dataset:
+                val_dataset.load_from_h5(True)
+            if test_dataset:
+                test_dataset.load_from_h5(True)
+
         datasets = (train_dataset, val_dataset, test_dataset)
         results, test_auc, val_auc, test_acc, val_acc  = train(datasets, i, args)
         all_test_auc.append(test_auc)
@@ -98,7 +107,15 @@ parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mi
 parser.add_argument('--exp_code', type=str, help='experiment code for saving results')
 parser.add_argument('--weighted_sample', action='store_true', default=False, help='enable weighted sampling')
 parser.add_argument('--model_size', type=str, choices=['small', 'big'], default='small', help='size of model, does not affect mil')
-parser.add_argument('--task', type=str, choices=['task_1_tumor_vs_normal',  'task_2_tumor_subtyping', "pathology_classifier"])
+parser.add_argument('--task', type=str, choices=[
+    'task_1_tumor_vs_normal',  
+    'task_2_tumor_subtyping', 
+    "pathology_full_subtyping", 
+    "pathology_sufficiency", 
+    "pathology_normalcy", 
+    "pathology_sufficiency_subtyping",
+    "pathology_management"
+    ])
 ### CLAM specific options
 parser.add_argument('--no_inst_cluster', action='store_true', default=False,
                      help='disable instance-level clustering')
@@ -109,6 +126,7 @@ parser.add_argument('--subtyping', action='store_true', default=False,
 parser.add_argument('--bag_weight', type=float, default=0.7,
                     help='clam: weight coefficient for bag-level loss (default: 0.7)')
 parser.add_argument('--B', type=int, default=8, help='numbr of positive/negative patches to sample for clam')
+parser.add_argument('--use_pos_embed', action='store_true', default=False, help='Enable positional embeddings')
 args = parser.parse_args()
 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -143,7 +161,8 @@ settings = {'num_splits': args.k,
             'model_size': args.model_size,
             "use_drop_out": args.drop_out,
             'weighted_sample': args.weighted_sample,
-            'opt': args.opt}
+            'opt': args.opt,
+            'use_pos_embed': args.use_pos_embed}
 
 if args.model_type in ['clam_sb', 'clam_mb']:
    settings.update({'bag_weight': args.bag_weight,
@@ -177,20 +196,95 @@ elif args.task == 'task_2_tumor_subtyping':
     if args.model_type in ['clam_sb', 'clam_mb']:
         assert args.subtyping 
 
-elif args.task == 'pathology_classifier':
-    args.n_classes=6
-    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_features.csv',
+elif args.task == 'pathology_full_subtyping':
+    args.n_classes=5 #6
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_full_subtyping.csv',
                             data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
                             shuffle = False, 
                             seed = args.seed, 
                             print_info = True,
-                            label_dict = {'insufficient':0, 'normal':1, 'low_grade':2, 'high_grade':3, 'cancer':4, 'atypia':5},
+                            label_dict = {'insufficient':0, 'normal':1, 'low_grade':2, 'high_grade':3, 'cancer':4},# 'atypia':5},
                             patient_strat=False,
                             ignore=[])
     # We should be using clam_mb and subtyping
-    assert args.model_type == 'clam_mb'
-    assert args.subtyping
-        
+    if args.model_type != 'clam_mb':
+        args.model_type = 'clam_mb'
+        print(f"Warning: For 'pathology_full_subtyping', model_type should be {args.model_type}. Overriding.")
+    if not args.subtyping:
+        args.subtyping = True
+        print(f"Warning: For 'pathology_full_subtyping', subtyping should be {args.subtyping}. Overriding.")
+
+elif args.task == 'pathology_sufficiency':
+    args.n_classes=2
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_sufficiency.csv',
+                            data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
+                            shuffle = False, 
+                            seed = args.seed, 
+                            print_info = True,
+                            label_dict = {'insufficient':0, 'sufficient':1},
+                            patient_strat=False,
+                            ignore=[],)
+    # We should be using clam_sb and not subtyping
+    if args.model_type != 'clam_sb':
+        args.model_type = 'clam_sb'
+        print(f"Warning: For 'pathology_sufficiency', model_type should be {args.model_type}. Overriding.")
+    if args.subtyping:
+        args.subtyping = False
+        print(f"Warning: For 'pathology_sufficiency', subtyping should be {args.subtyping}. Overriding.")
+
+elif args.task == 'pathology_sufficiency_subtyping':
+    args.n_classes=3
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_sufficiency_subtyping.csv',
+                            data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
+                            shuffle = False, 
+                            seed = args.seed, 
+                            print_info = True,
+                            label_dict = {'sufficient':0, 'blurry':1, 'insufficient':2},
+                            patient_strat=False,
+                            ignore=[],)
+    # We should be using clam_mb and subtyping
+    if args.model_type != 'clam_mb':
+        args.model_type = 'clam_mb'
+        print(f"Warning: For 'pathology_sufficiency_subtyping', model_type should be {args.model_type}. Overriding.")
+    if not args.subtyping:
+        args.subtyping = True
+        print(f"Warning: For 'pathology_sufficiency_subtyping', subtyping should be {args.subtyping}. Overriding.")
+
+elif args.task == 'pathology_normalcy':
+    args.n_classes=2
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_normalcy.csv',
+                            data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
+                            shuffle = False, 
+                            seed = args.seed, 
+                            print_info = True,
+                            label_dict = {'normal':0, 'abnormal':1},
+                            patient_strat=False,
+                            ignore=[],)
+    # We should be using clam_sb and not subtyping
+    if args.model_type != 'clam_sb':
+        args.model_type = 'clam_sb'
+        print(f"Warning: For 'pathology_normalcy', model_type should be {args.model_type}. Overriding.")
+    if args.subtyping:
+        args.subtyping = False
+        print(f"Warning: For 'pathology_normalcy', subtyping should be {args.subtyping}. Overriding.")
+
+elif args.task == 'pathology_management':
+    args.n_classes=2
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_management.csv',
+                            data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
+                            shuffle = False, 
+                            seed = args.seed, 
+                            print_info = True,
+                            label_dict = {'follow_up':0, 'treatment':1},
+                            patient_strat=False,
+                            ignore=[],)
+    # We should be using clam_sb and not subtyping
+    if args.model_type != 'clam_sb':
+        args.model_type = 'clam_sb'
+        print(f"Warning: For 'pathology_management', model_type should be {args.model_type}. Overriding.")
+    if args.subtyping:
+        args.subtyping = False
+        print(f"Warning: For 'pathology_management', subtyping should be {args.subtyping}. Overriding.")
 else:
     raise NotImplementedError
     

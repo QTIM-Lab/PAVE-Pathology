@@ -1,5 +1,12 @@
 #!/bin/bash
 
+: <<'end_comment'
+
+This script calls the feat_ext_template.sh script for each subdirectory in the pv3 directory.
+Should be adapted for use outside Alpine (i.e. changing base dir, etc.)
+
+end_comment
+
 # Make sure the template is executable
 chmod +x feat_ext_template.sh
 

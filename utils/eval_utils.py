@@ -10,9 +10,61 @@ import os
 import pandas as pd
 from utils.utils import *
 from utils.core_utils import Accuracy_Logger
-from sklearn.metrics import roc_auc_score, roc_curve, auc
+from sklearn.metrics import roc_auc_score, roc_curve, auc, confusion_matrix
 from sklearn.preprocessing import label_binarize
 import matplotlib.pyplot as plt
+import seaborn as sns
+from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 unused import
+from itertools import cycle
+
+def plot_multiclass_roc(all_labels, all_probs, n_classes, save_dir, class_labels):
+    all_labels_b = label_binarize(all_labels, classes=range(n_classes))
+
+    fpr = dict()
+    tpr = dict()
+    roc_auc = dict()
+    for i in range(n_classes):
+        fpr[i], tpr[i], _ = roc_curve(all_labels_b[:, i], all_probs[:, i])
+        roc_auc[i] = auc(fpr[i], tpr[i])
+
+    fpr["micro"], tpr["micro"], _ = roc_curve(all_labels_b.ravel(), all_probs.ravel())
+    roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
+
+    all_fpr = np.unique(np.concatenate([fpr[i] for i in range(n_classes)]))
+    mean_tpr = np.zeros_like(all_fpr)
+    for i in range(n_classes):
+        mean_tpr += np.interp(all_fpr, fpr[i], tpr[i])
+    mean_tpr /= n_classes
+    fpr["macro"] = all_fpr
+    tpr["macro"] = mean_tpr
+    roc_auc["macro"] = auc(fpr["macro"], tpr["macro"])
+
+    plt.figure(figsize=(10, 8))
+    plt.plot(fpr["micro"], tpr["micro"],
+             label=f'micro-average ROC curve (area = {roc_auc["micro"]:0.2f})',
+             color='deeppink', linestyle=':', linewidth=4)
+
+    plt.plot(fpr["macro"], tpr["macro"],
+             label=f'macro-average ROC curve (area = {roc_auc["macro"]:0.2f})',
+             color='navy', linestyle=':', linewidth=4)
+
+    colors = cycle(['aqua', 'darkorange', 'cornflowerblue', 'green', 'red', 'purple', 'brown'])
+    for i, color in zip(range(n_classes), colors):
+        plt.plot(fpr[i], tpr[i], color=color, lw=2,
+                 label=f'ROC curve of {class_labels[i]} (area = {roc_auc[i]:0.2f})')
+
+    plt.plot([0, 1], [0, 1], 'k--', lw=2)
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Multi-class Receiver Operating Characteristic')
+    plt.legend(loc="lower right")
+    
+    save_path = os.path.join(save_dir, 'multiclass_roc_curve.png')
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    plt.close()
+    print(f"Multi-class ROC curve saved to {save_path}")
 
 def initiate_model(args, ckpt_path, device='cuda'):
     print('Init Model')    
@@ -49,7 +101,7 @@ def eval(dataset, args, ckpt_path):
     model = initiate_model(args, ckpt_path)
     
     print('Init Loaders')
-    loader = get_simple_loader(dataset)
+    loader = get_simple_loader(dataset, num_workers=8)
     patient_results, test_error, auc, df, _ = summary(model, loader, args)
     print('test_error: ', test_error)
     print('auc: ', auc)
@@ -67,11 +119,14 @@ def summary(model, loader, args):
 
     slide_ids = loader.dataset.slide_data['slide_id']
     patient_results = {}
-    for batch_idx, (data, label) in enumerate(loader):
-        data, label = data.to(device), label.to(device)
+    for batch_idx, (data, coords, label) in enumerate(loader):
+        data, coords, label = data.to(device), coords.to(device), label.to(device)
         slide_id = slide_ids.iloc[batch_idx]
         with torch.no_grad():
-            logits, Y_prob, Y_hat, _, results_dict = model(data)
+            logits, Y_prob, Y_hat, _, results_dict = model(h=data, coords=coords)
+        
+        if args.n_classes == 2 and args.threshold is not None:
+            Y_hat = (Y_prob[:, 1] >= args.threshold).long()
         
         acc_logger.log(Y_hat, label)
         
@@ -89,14 +144,79 @@ def summary(model, loader, args):
     del data
     test_error /= len(loader)
 
+    # Generate confusion matrix
+    cm = confusion_matrix(all_labels, all_preds)
+    
+    # Get actual class labels from args
+    if hasattr(args, 'label_dict'):
+        # Create reverse mapping from numeric to string labels
+        reverse_label_dict = {v: k for k, v in args.label_dict.items()}
+        class_labels = [reverse_label_dict.get(i, f'Class {i}') for i in range(args.n_classes)]
+    else:
+        # Fallback to generic labels if no label_dict available
+        class_labels = [f'Class {i}' for i in range(args.n_classes)]
+    
+    # Create confusion matrix plot
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
+                xticklabels=class_labels,
+                yticklabels=class_labels)
+    plt.title('Confusion Matrix')
+    plt.ylabel('True Label')
+    plt.xlabel('Predicted Label')
+    
+    # Rotate x-axis labels if they're long
+    plt.xticks(rotation=45, ha='right')
+    plt.yticks(rotation=0)
+    
+    # Save confusion matrix plot
+    if hasattr(args, 'save_dir'):
+        cm_save_path = os.path.join(args.save_dir, 'confusion_matrix.png')
+        plt.savefig(cm_save_path, dpi=300, bbox_inches='tight')
+        print(f'Confusion matrix saved to: {cm_save_path}')
+    
+    plt.close()
+    
+    # Print confusion matrix to console with actual labels
+    print('\nConfusion Matrix:')
+    print('True labels (rows):', class_labels)
+    print('Predicted labels (columns):', class_labels)
+    print(cm)
+
     aucs = []
     if len(np.unique(all_labels)) == 1:
         auc_score = -1
 
     else: 
         if args.n_classes == 2:
+            fpr, tpr, thresholds = roc_curve(all_labels, all_probs[:, 1])
+            roc_auc = auc(fpr, tpr)
+            plt.figure()
+            plt.plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve (area = %0.2f)' % roc_auc)
+            plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+            plt.xlim([0.0, 1.0])
+            plt.ylim([0.0, 1.05])
+            plt.xlabel('False Positive Rate')
+            plt.ylabel('True Positive Rate')
+            plt.title('Receiver Operating Characteristic')
+            plt.legend(loc="lower right")
+
+            # Annotate every other threshold point (skip the first and last for clarity)
+            for i in range(1, len(fpr)-1):
+                plt.annotate(f'{thresholds[i]:.2f}', 
+                             (fpr[i], tpr[i]), 
+                             textcoords="offset points", 
+                             xytext=(0,0), 
+                             ha='left', fontsize=4, color='black', rotation=0)
+
+            if hasattr(args, 'save_dir'):
+                roc_save_path = os.path.join(args.save_dir, 'roc_curve.png')
+                plt.savefig(roc_save_path, dpi=300, bbox_inches='tight')
+                print(f'ROC curve saved to: {roc_save_path}')
+            plt.close()
             auc_score = roc_auc_score(all_labels, all_probs[:, 1])
         else:
+            plot_multiclass_roc(all_labels, all_probs, args.n_classes, args.save_dir, class_labels)
             binary_labels = label_binarize(all_labels, classes=[i for i in range(args.n_classes)])
             for class_idx in range(args.n_classes):
                 if class_idx in all_labels:
