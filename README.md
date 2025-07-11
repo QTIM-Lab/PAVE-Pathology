@@ -64,9 +64,6 @@ navyblue/
 -  Loads the appropriate conda environment and runs `create_patches_fp.py` with the correct arguments.
 -  Additionally executes `gen_pre_feat_ext_csv.py` for CSV processing.
 -  Example usage:
-   ```
-   sbatch feat_ext_template.sh /path/to/data_dir
-   ```
 
 **Batch Submission:**
 
@@ -75,7 +72,7 @@ To process all subdirectories (e.g., all lettered folders in a dataset), use:
 -  `patch_navyblue.sh` for the `navyblue` dataset.
 -  `patch_pv3.sh` for the `pv3` dataset.
 
-These scripts loop through all lettered subdirectories and submit a feature extraction job for each.
+These scripts loop through all lettered subdirectories and submit a feature extraction job using `patch_template.sh` for each.
 
 **Results:**
 
@@ -83,7 +80,7 @@ The execution of `create_patches_fp.py` and `gen_pre_feat_ext_csv.py`, as facili
 
 ```
 navyblue/
-	├── A
+   ├── A
       ├── wsis
          └── ...
       ├── masks
@@ -114,10 +111,6 @@ navyblue/
 
 -  SLURM batch script to extract features from a specified directory.
 -  Loads the appropriate conda environment and runs `extract_features_fp.py` with the correct arguments.
--  Example usage:
-   ```bash
-   sbatch feat_ext_template.sh /path/to/data_dir
-   ```
 
 **Batch Submission:**
 
@@ -126,7 +119,7 @@ To process all subdirectories (e.g., all lettered folders in a dataset), use:
 -  `feat_ext_navyblue.sh` for the `navyblue` dataset
 -  `feat_ext_pv3.sh` for the `pv3` dataset
 
-These scripts loop through all subdirectories and submit a feature extraction job for each.
+These scripts loop through all subdirectories and submit a feature extraction job using `feat_ext_template.sh` for each.
 
 **Results**
 
