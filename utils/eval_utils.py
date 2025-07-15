@@ -141,6 +141,15 @@ def summary(model, loader, args):
         error = calculate_error(Y_hat, label)
         test_error += error
 
+        if hasattr(args, 'save_intermediate_results') and args.save_intermediate_results:
+
+            results_dict = {'slide_id': slide_ids, 'Y': all_labels, 'Y_hat': all_preds}
+            for c in range(args.n_classes):
+                results_dict.update({'p_{}'.format(c): all_probs[:,c]})
+            df = pd.DataFrame(results_dict)
+
+            df.to_csv(os.path.join(args.save_dir, 'intermediate_results.csv'), index=False)
+
     del data
     test_error /= len(loader)
 
