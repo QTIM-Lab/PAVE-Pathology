@@ -46,7 +46,9 @@ parser.add_argument('--task', type=str, choices=[
     'pathology_sufficiency', 
     'pathology_normalcy',
     'pathology_sufficiency_subtyping',
-    'pathology_management'])
+    'pathology_management',
+    'pathology_normalcy_unreviewed'
+    ])
 parser.add_argument('--drop_out', type=float, default=0.25, help='dropout')
 parser.add_argument('--embed_dim', type=int, default=1024)
 parser.add_argument('--threshold', type=float, default=None, help='decision threshold for binary classification')
