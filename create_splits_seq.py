@@ -19,7 +19,9 @@ parser.add_argument('--task', type=str, choices=[
     'pathology_sufficiency', 
     'pathology_normalcy', 
     'pathology_sufficiency_subtyping', 
-    'pathology_management'])
+    'pathology_management',
+    'pathology_abnormal_subtyping'
+    ])
 parser.add_argument('--val_frac', type=float, default= 0.1,
                     help='fraction of labels for validation (default: 0.1)')
 parser.add_argument('--test_frac', type=float, default= 0.1,
@@ -95,6 +97,16 @@ elif args.task == 'pathology_management':
                             seed = args.seed, 
                             print_info = True,
                             label_dict = {'follow_up':0, 'treatment':1},
+                            patient_strat=False,
+                            ignore=[],)
+
+elif args.task == 'pathology_abnormal_subtyping':
+    args.n_classes=3
+    dataset = Generic_WSI_Classification_Dataset(csv_path = 'dataset_csv/pathology_abnormal_subtyping.csv',
+                            shuffle = False,
+                            seed = args.seed, 
+                            print_info = True,
+                            label_dict = {'low_grade':0, 'high_grade':1, 'cancer':2},
                             patient_strat=False,
                             ignore=[],)
 
