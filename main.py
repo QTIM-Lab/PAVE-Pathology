@@ -114,7 +114,8 @@ parser.add_argument('--task', type=str, choices=[
     "pathology_sufficiency", 
     "pathology_normalcy", 
     "pathology_sufficiency_subtyping",
-    "pathology_management"
+    "pathology_management",
+    "pathology_abnormal_subtyping"
     ])
 ### CLAM specific options
 parser.add_argument('--no_inst_cluster', action='store_true', default=False,
@@ -285,6 +286,23 @@ elif args.task == 'pathology_management':
     if args.subtyping:
         args.subtyping = False
         print(f"Warning: For 'pathology_management', subtyping should be {args.subtyping}. Overriding.")
+elif args.task == 'pathology_abnormal_subtyping':
+    args.n_classes=3
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_abnormal_subtyping.csv',
+                            data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
+                            shuffle = False, 
+                            seed = args.seed, 
+                            print_info = True,
+                            label_dict = {'low_grade':0, 'high_grade':1, 'cancer':2},
+                            patient_strat=False,
+                            ignore=[],)
+    # We should be using clam_mb and subtyping
+    if args.model_type != 'clam_mb':
+        args.model_type = 'clam_mb'
+        print(f"Warning: For 'pathology_abnormal_subtyping', model_type should be {args.model_type}. Overriding.")
+    if not args.subtyping:
+        args.subtyping = True
+        print(f"Warning: For 'pathology_abnormal_subtyping', subtyping should be {args.subtyping}. Overriding.")
 else:
     raise NotImplementedError
     

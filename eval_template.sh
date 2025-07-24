@@ -32,6 +32,10 @@ sbatch eval_template.sh --task pathology_sufficiency_subtyping --models_exp_code
 sbatch eval_template.sh --task pathology_management --models_exp_code management_s1 --save_exp_code management_val --model_type clam_sb --split val
 sbatch eval_template.sh --task pathology_management --models_exp_code management_s1 --save_exp_code management_test --model_type clam_sb --split test --threshold  0.03
 
+sbatch eval_template.sh --task pathology_normalcy_unreviewed --models_exp_code normalcy_1_s1 --save_exp_code normalcy_unreviewed_val --model_type clam_sb --split all --threshold 0.06
+
+sbatch eval_template.sh --task pathology_sufficiency_unreviewed --models_exp_code sufficiency_1_s1 --save_exp_code sufficiency_unreviewed_val --model_type clam_sb --split all --threshold 0.8
+
 end_comment
 
 

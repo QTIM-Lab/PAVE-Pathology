@@ -34,6 +34,8 @@ sbatch train_template.sh --task pathology_sufficiency_subtyping --exp_code suffi
 
 sbatch train_template.sh --task pathology_management --exp_code management --model_type clam_sb --data_root_dir /scratch/alpine/$USER/pave_training
 
+sbatch train_template.sh --task pathology_abnormal_subtyping --exp_code abnormal_subtyping --model_type clam_mb --data_root_dir /scratch/alpine/$USER/pave_training
+
 end_comment
 
 # Parse command line arguments
