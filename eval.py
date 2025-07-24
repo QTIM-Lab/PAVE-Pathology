@@ -48,7 +48,8 @@ parser.add_argument('--task', type=str, choices=[
     'pathology_sufficiency_subtyping',
     'pathology_management',
     'pathology_normalcy_unreviewed',
-    'pathology_sufficiency_unreviewed'
+    'pathology_sufficiency_unreviewed',
+    'pathology_abnormal_subtyping'
     ])
 parser.add_argument('--drop_out', type=float, default=0.25, help='dropout')
 parser.add_argument('--embed_dim', type=int, default=1024)
@@ -174,6 +175,17 @@ elif args.task == 'pathology_sufficiency_unreviewed':
     args.label_dict = {'insufficient':0, 'sufficient':1}
     args.save_intermediate_results = True
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_unreviewed.csv',
+                            data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
+                            shuffle = False, 
+                            print_info = True,
+                            label_dict = args.label_dict,
+                            patient_strat=False,
+                            ignore=[])
+    
+elif args.task == 'pathology_abnormal_subtyping':
+    args.n_classes=3
+    args.label_dict = {'low_grade':0, 'high_grade':1, 'cancer':2}
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_abnormal_subtyping.csv',
                             data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
                             shuffle = False, 
                             print_info = True,
