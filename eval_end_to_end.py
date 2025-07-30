@@ -16,7 +16,7 @@ from utils.eval_utils import *
 
 # Training settings
 parser = argparse.ArgumentParser(description='CLAM Evaluation Script')
-parser.add_argument('--data_root_dir', type=str, required=True,
+parser.add_argument('--data_root_dir', type=str, default='/scratch/alpine/ataghinia@xsede.org/pave_training',
                     help='data directory')
 parser.add_argument('--results_dir', type=str, default='./results',
                     help='relative path to results folder, i.e. '+
