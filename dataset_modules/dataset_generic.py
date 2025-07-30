@@ -31,6 +31,7 @@ def save_splits(split_datasets, column_keys, filename, boolean_style=False):
 class Generic_WSI_Classification_Dataset(Dataset):
 	def __init__(self,
 		csv_path = 'dataset_csv/ccrcc_clean.csv',
+		slide_data_df = None,
 		shuffle = False, 
 		seed = 7, 
 		print_info = True,
@@ -45,6 +46,7 @@ class Generic_WSI_Classification_Dataset(Dataset):
 		"""
 		Args:
 			csv_file (string): Path to the csv file with annotations.
+			slide_data_df (pd.DataFrame): DataFrame with slide data. If provided, overrides csv_path.
 			shuffle (boolean): Whether to shuffle
 			seed (int): random seed for shuffling the data
 			print_info (boolean): Whether to print a summary of the dataset
@@ -64,7 +66,12 @@ class Generic_WSI_Classification_Dataset(Dataset):
 			label_col = 'label'
 		self.label_col = label_col
 
-		slide_data = pd.read_csv(csv_path)
+		# Allow passing in a DataFrame directly
+		if slide_data_df is not None:
+			slide_data = slide_data_df.copy()
+		else:
+			slide_data = pd.read_csv(csv_path)
+
 		slide_data = self.filter_df(slide_data, filter_dict)
 		slide_data = self.df_prep(slide_data, self.label_dict, ignore, self.label_col)
 
@@ -370,6 +377,3 @@ class Generic_Split(Generic_MIL_Dataset):
 
 	def __len__(self):
 		return len(self.slide_data)
-		
-
-

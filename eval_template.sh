@@ -36,6 +36,8 @@ sbatch eval_template.sh --task pathology_normalcy_unreviewed --models_exp_code n
 
 sbatch eval_template.sh --task pathology_sufficiency_unreviewed --models_exp_code sufficiency_1_s1 --save_exp_code sufficiency_unreviewed_val --model_type clam_sb --split all --threshold 0.8
 
+source eval_template.sh --task pathology_abnormal_subtyping --models_exp_code abnormal_subtyping_s1 --save_exp_code abnormal_subtyping_test --model_type clam_mb --split test
+
 end_comment
 
 

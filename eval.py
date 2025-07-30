@@ -49,7 +49,7 @@ parser.add_argument('--task', type=str, choices=[
     'pathology_management',
     'pathology_normalcy_unreviewed',
     'pathology_sufficiency_unreviewed',
-    'pathology_abnormal_subtyping'
+    'pathology_abnormal_subtyping',
     ])
 parser.add_argument('--drop_out', type=float, default=0.25, help='dropout')
 parser.add_argument('--embed_dim', type=int, default=1024)
@@ -216,6 +216,7 @@ if __name__ == "__main__":
     all_results = []
     all_auc = []
     all_acc = []
+
     for ckpt_idx in range(len(ckpt_paths)):
         if datasets_id[args.split] < 0:
             split_dataset = dataset
