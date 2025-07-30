@@ -117,6 +117,7 @@ if __name__ == "__main__":
     abnorm_df = df[df['norm_pred'] == 1].copy()
     if len(abnorm_df) > 0:
         abnorm_dataset = gen_dataset(abnorm_df)
+        args.model_type = 'clam_mb'
         inference(df, 'abnorm_pred', args, abnorm_model_ckpt, abnorm_dataset)
     else:
         print("No slides predicted as normal for abnormal subtyping model.")
