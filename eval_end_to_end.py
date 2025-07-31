@@ -89,7 +89,7 @@ def inference(df, col, args, model_ckpt, dataset, threshold=None):
                 print(f"Warning: slide_id {slide_id} not found in DataFrame.")
 
 if __name__ == "__main__":
-    df = pd.read_csv('dataset_csv/pathology_end_to_end.csv')
+    df = pd.read_csv('dataset_csv/concat.csv')
 
     # Ensure slide_id is the index for easier assignment
     if 'slide_id' in df.columns:
