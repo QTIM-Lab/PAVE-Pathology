@@ -108,7 +108,7 @@ while [[ $# -gt 0 ]]; do
       shift 1
       ;;
     --split_dir)
-      SPILT_DIR="$2"
+      SPLIT_DIR="$2"
       shift 2
       ;;
     --additional_args)
@@ -138,12 +138,12 @@ MAX_EPOCHS=${MAX_EPOCHS:-100}
 SUBTYPING=${SUBTYPING:-False}
 ADDITIONAL_ARGS=${ADDITIONAL_ARGS:-"--weighted_sample --early_stopping --log_data"}
 USE_POS_EMBED=${USE_POS_EMBED:-False}
-SPILT_DIR=${SPILT_DIR:-}
+SPLIT_DIR=${SPLIT_DIR:-}
 
 echo "Training task: $TASK, code $EXP_CODE"
 echo "Subtyping: $SUBTYPING, use_pos_embed: $USE_POS_EMBED"
-if [[ -n "$SPILT_DIR" ]]; then
-  echo "Using spilt_dir: $SPILT_DIR"
+if [[ -n "$SPLIT_DIR" ]]; then
+  echo "Using split_dir: $SPLIT_DIR"
 fi
 
 module load miniforge
@@ -167,5 +167,5 @@ CUDA_VISIBLE_DEVICES=0 python main.py \
    --embed_dim $EMBED_DIM \
    $( [ "$SUBTYPING" = "True" ] && echo "--subtyping" ) \
    $( [ "$USE_POS_EMBED" = "True" ] && echo "--use_pos_embed" ) \
-   $( [ -n "$SPILT_DIR" ] && echo "--spilt_dir $SPILT_DIR" ) \
+   $( [ -n "$SPLIT_DIR" ] && echo "--split_dir $SPLIT_DIR" ) \
    $ADDITIONAL_ARGS
