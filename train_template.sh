@@ -36,6 +36,11 @@ sbatch train_template.sh --task pathology_management --exp_code management --mod
 
 sbatch train_template.sh --task pathology_abnormal_subtyping --exp_code abnormal_subtyping --model_type clam_mb --data_root_dir /scratch/alpine/$USER/pave_training
 
+
+sbatch train_template.sh --task pathology_sufficiency --exp_code e2e_sufficiency --model_type clam_sb --data_root_dir /scratch/alpine/$USER/pave_training --split_dir e2e_sufficiency
+sbatch train_template.sh --task pathology_normalcy --exp_code e2e_normalcy --model_type clam_sb --data_root_dir /scratch/alpine/$USER/pave_training --split_dir e2e_normalcy
+sbatch train_template.sh --task pathology_abnormal_tubsyping --exp_code e2e_priority --model_type clam_sb --data_root_dir /scratch/alpine/$USER/pave_training --split_dir e2e_priority
+
 end_comment
 
 # Parse command line arguments
@@ -102,6 +107,10 @@ while [[ $# -gt 0 ]]; do
       USE_POS_EMBED="True"
       shift 1
       ;;
+    --split_dir)
+      SPILT_DIR="$2"
+      shift 2
+      ;;
     --additional_args)
       ADDITIONAL_ARGS="$2"
       shift 2
@@ -129,9 +138,13 @@ MAX_EPOCHS=${MAX_EPOCHS:-100}
 SUBTYPING=${SUBTYPING:-False}
 ADDITIONAL_ARGS=${ADDITIONAL_ARGS:-"--weighted_sample --early_stopping --log_data"}
 USE_POS_EMBED=${USE_POS_EMBED:-False}
+SPILT_DIR=${SPILT_DIR:-}
 
 echo "Training task: $TASK, code $EXP_CODE"
 echo "Subtyping: $SUBTYPING, use_pos_embed: $USE_POS_EMBED"
+if [[ -n "$SPILT_DIR" ]]; then
+  echo "Using spilt_dir: $SPILT_DIR"
+fi
 
 module load miniforge
 
@@ -154,4 +167,5 @@ CUDA_VISIBLE_DEVICES=0 python main.py \
    --embed_dim $EMBED_DIM \
    $( [ "$SUBTYPING" = "True" ] && echo "--subtyping" ) \
    $( [ "$USE_POS_EMBED" = "True" ] && echo "--use_pos_embed" ) \
+   $( [ -n "$SPILT_DIR" ] && echo "--spilt_dir $SPILT_DIR" ) \
    $ADDITIONAL_ARGS
