@@ -23,6 +23,7 @@ parser.add_argument('--results_dir', type=str, default='./results',
                     'the directory containing models_exp_code relative to project root (default: ./results)')
 parser.add_argument('--save_exp_code', type=str, default='end_to_end',
                     help='experiment code to save eval results')
+parser.add_argument('--test_csv', type=str, default="e2e_test.csv")
 
 parser.add_argument('--suff_model_exp_code', type=str, default='e2e_sufficiency_s1')
 parser.add_argument('--norm_model_exp_code', type=str, default='e2e_normalcy_s1')
@@ -89,7 +90,7 @@ def inference(df, col, args, model_ckpt, dataset, threshold=None):
                 print(f"Warning: slide_id {slide_id} not found in DataFrame.")
 
 if __name__ == "__main__":
-    df = pd.read_csv('dataset_csv/concat.csv')
+    df = pd.read_csv(os.path.join('dataset_csv', args.test_csv))
 
     # Ensure slide_id is the index for easier assignment
     if 'slide_id' in df.columns:
@@ -125,3 +126,9 @@ if __name__ == "__main__":
     # Reset index if needed and save results
     df.reset_index(inplace=True)
     df.to_csv(os.path.join(args.save_dir, "results.csv"), index=False)
+
+'''
+module load miniforge
+conda activate clam_latest
+CUDA_VISIBLE_DEVICES=0 python eval_end_to_end.py
+'''
