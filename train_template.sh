@@ -39,7 +39,7 @@ sbatch train_template.sh --task pathology_abnormal_subtyping --exp_code abnormal
 
 sbatch train_template.sh --task pathology_sufficiency --exp_code e2e_sufficiency --model_type clam_sb --data_root_dir /scratch/alpine/$USER/pave_training --split_dir e2e_sufficiency
 sbatch train_template.sh --task pathology_normalcy --exp_code e2e_normalcy --model_type clam_sb --data_root_dir /scratch/alpine/$USER/pave_training --split_dir e2e_normalcy
-sbatch train_template.sh --task pathology_abnormal_tubsyping --exp_code e2e_priority --model_type clam_sb --data_root_dir /scratch/alpine/$USER/pave_training --split_dir e2e_priority
+sbatch train_template.sh --task pathology_abnormal_subtyping --exp_code e2e_priority --model_type clam_sb --data_root_dir /scratch/alpine/$USER/pave_training --split_dir e2e_priority
 
 end_comment
 
