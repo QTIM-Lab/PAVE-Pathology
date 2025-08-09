@@ -37,6 +37,9 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 args.save_dir = os.path.join('./eval_results', 'EVAL_' + str(args.save_exp_code))
 
+args.model_type = "clam_sb"
+args.model_size = "small"
+
 suff_model_ckpt = os.path.join(args.results_dir, str(args.suff_model_exp_code), "s_0_checkpoint.pt")
 norm_model_ckpt = os.path.join(args.results_dir, str(args.norm_model_exp_code), "s_0_checkpoint.pt")
 priority_model_ckpt = os.path.join(args.results_dir, str(args.priority_model_exp_code), "s_0_checkpoint.pt")
