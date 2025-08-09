@@ -102,6 +102,7 @@ if __name__ == "__main__":
 
     # Sufficiency Model
     dataset = gen_dataset(df)
+    args.n_classes = 2
     inference(df, 'suff_pred', args, suff_model_ckpt, dataset, threshold=0.8)
 
     # Normalcy Model
@@ -109,6 +110,7 @@ if __name__ == "__main__":
     norm_df = df[df['suff_pred'] == 1].copy()
     if len(norm_df) > 0:
         norm_dataset = gen_dataset(norm_df)
+        args.n_classes = 2
         inference(df, 'norm_pred', args, norm_model_ckpt, norm_dataset, threshold=0.06)
     else:
         print("No slides predicted as sufficient for normalcy model.")
@@ -119,6 +121,7 @@ if __name__ == "__main__":
     if len(priority_df) > 0:
         priority_dataset = gen_dataset(priority_df)
         args.model_type = 'clam_mb'
+        args.n_classes = 3
         inference(df, 'priority_pred', args, priority_model_ckpt, priority_dataset)
     else:
         print("No slides predicted as abnormal for priority model.")
