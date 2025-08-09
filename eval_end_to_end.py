@@ -24,9 +24,9 @@ parser.add_argument('--results_dir', type=str, default='./results',
 parser.add_argument('--save_exp_code', type=str, default='end_to_end',
                     help='experiment code to save eval results')
 
-parser.add_argument('--suff_model_exp_code', type=str, default='sufficiency_1_s1')
-parser.add_argument('--norm_model_exp_code', type=str, default='normalcy_1_s1')
-parser.add_argument('--abnorm_model_exp_code', type=str, default='abnormal_subtyping_s1')
+parser.add_argument('--suff_model_exp_code', type=str, default='e2e_sufficiency_s1')
+parser.add_argument('--norm_model_exp_code', type=str, default='e2e_normalcy_s1')
+parser.add_argument('--priority_model_exp_code', type=str, default='e2e_priority_s1')
 
 parser.add_argument('--drop_out', type=float, default=0.25, help='dropout')
 parser.add_argument('--embed_dim', type=int, default=1024)
@@ -38,7 +38,7 @@ args.save_dir = os.path.join('./eval_results', 'EVAL_' + str(args.save_exp_code)
 
 suff_model_ckpt = os.path.join(args.results_dir, str(args.suff_model_exp_code), "s_0_checkpoint.pt")
 norm_model_ckpt = os.path.join(args.results_dir, str(args.norm_model_exp_code), "s_0_checkpoint.pt")
-abnorm_model_ckpt = os.path.join(args.results_dir, str(args.abnorm_model_exp_code), "s_0_checkpoint.pt")
+priority_model_ckpt = os.path.join(args.results_dir, str(args.priority_model_exp_code), "s_0_checkpoint.pt")
 
 os.makedirs(args.save_dir, exist_ok=True)
 
@@ -97,7 +97,7 @@ if __name__ == "__main__":
 
     df['suff_pred'] = pd.NA
     df['norm_pred'] = pd.NA
-    df['abnorm_pred'] = pd.NA
+    df['priority_pred'] = pd.NA
 
     # Sufficiency Model
     dataset = gen_dataset(df)
@@ -112,15 +112,15 @@ if __name__ == "__main__":
     else:
         print("No slides predicted as sufficient for normalcy model.")
 
-    # Abnormal Subtyping Model
-    # Only keep slides predicted as normal (norm_pred == 1)
-    abnorm_df = df[df['norm_pred'] == 1].copy()
-    if len(abnorm_df) > 0:
-        abnorm_dataset = gen_dataset(abnorm_df)
+    # Priority Model
+    # Only keep slides predicted as abnormal (norm_pred == 0)
+    priority_df = df[df['norm_pred'] == 0].copy()
+    if len(priority_df) > 0:
+        priority_dataset = gen_dataset(priority_df)
         args.model_type = 'clam_mb'
-        inference(df, 'abnorm_pred', args, abnorm_model_ckpt, abnorm_dataset)
+        inference(df, 'priority_pred', args, priority_model_ckpt, priority_dataset)
     else:
-        print("No slides predicted as normal for abnormal subtyping model.")
+        print("No slides predicted as abnormal for priority model.")
 
     # Reset index if needed and save results
     df.reset_index(inplace=True)
