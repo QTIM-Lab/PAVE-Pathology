@@ -115,8 +115,8 @@ if __name__ == "__main__":
         print("No slides predicted as sufficient for normalcy model.")
 
     # Priority Model
-    # Only keep slides predicted as abnormal (norm_pred == 0)
-    priority_df = df[df['norm_pred'] == 0].copy()
+    # Only keep slides predicted as abnormal (norm_pred == 1)
+    priority_df = df[df['norm_pred'] == 1].copy()
     if len(priority_df) > 0:
         priority_dataset = gen_dataset(priority_df)
         args.model_type = 'clam_mb'
@@ -132,4 +132,5 @@ if __name__ == "__main__":
 module load miniforge
 conda activate clam_latest
 CUDA_VISIBLE_DEVICES=0 python eval_end_to_end.py
+
 '''
