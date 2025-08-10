@@ -95,10 +95,6 @@ def inference(df, col, args, model_ckpt, dataset, threshold=None):
 if __name__ == "__main__":
     df = pd.read_csv(os.path.join('dataset_csv', args.test_csv))
 
-    # Ensure slide_id is the index for easier assignment
-    if 'slide_id' in df.columns:
-        df.set_index('slide_id', inplace=True)
-
     df['suff_pred'] = pd.NA
     df['norm_pred'] = pd.NA
     df['priority_pred'] = pd.NA
@@ -129,8 +125,7 @@ if __name__ == "__main__":
     else:
         print("No slides predicted as abnormal for priority model.")
 
-    # Reset index if needed and save results
-    df.reset_index(inplace=True)
+    # Save results
     df.to_csv(os.path.join(args.save_dir, "results.csv"), index=False)
 
 '''
