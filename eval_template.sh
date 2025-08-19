@@ -40,8 +40,11 @@ source eval_template.sh --task pathology_abnormal_subtyping --models_exp_code ab
 
 
 
-sbatch eval_template.sh --task pathology_sufficiency --models_exp_code e2e_sufficiency_s1 --save_exp_code e2e_sufficiency --model_type clam_sb --split val --split_dir e2e_sufficiency
-sbatch eval_template.sh --task pathology_normalcy --models_exp_code e2e_normalcy_s1 --save_exp_code e2e_normalcy --model_type clam_sb --split val --split_dir e2e_normalcy
+source eval_template.sh --task pathology_sufficiency --models_exp_code e2e_sufficiency_s1 --save_exp_code e2e_sufficiency --model_type clam_sb --split val --splits_dir e2e_sufficiency
+source eval_template.sh --task pathology_normalcy --models_exp_code e2e_normalcy_s1 --save_exp_code e2e_normalcy --model_type clam_sb --split val --splits_dir e2e_normalcy
+
+source eval_template.sh --task pathology_sufficiency --models_exp_code e2e_sufficiency_s1 --save_exp_code e2e_sufficiency --model_type clam_sb --split test --splits_dir e2e_sufficiency
+source eval_template.sh --task pathology_normalcy --models_exp_code e2e_normalcy_s1 --save_exp_code e2e_normalcy --model_type clam_sb --split test --splits_dir e2e_normalcy
 
 end_comment
 
@@ -85,7 +88,7 @@ while [[ $# -gt 0 ]]; do
       SPLIT="$2"
       shift 2
       ;;
-    --split_dir)
+    --splits_dir)
       SPLIT_DIR="$2"
       shift 2
       ;;
@@ -116,7 +119,7 @@ EMBED_DIM=${EMBED_DIM:-1024}
 SPLIT=${SPLIT:-test}
 ADDITIONAL_ARGS=${ADDITIONAL_ARGS:-""}
 THRESHOLD_ARG=${THRESHOLD:+"--threshold $THRESHOLD"}
-SPLIT_DIR=${SPLIT_DIR:-}
+SPLITS_DIR=${SPLITS_DIR:-}
 
 module load miniforge
 
@@ -141,7 +144,7 @@ python eval.py \
    --drop_out $DROP_OUT \
    --embed_dim $EMBED_DIM \
    --split $SPLIT \
-   --split_dir $SPLIT_DIR \
+   --splits_dir $SPLITS_DIR \
    $THRESHOLD_ARG \
    $ADDITIONAL_ARGS
 
