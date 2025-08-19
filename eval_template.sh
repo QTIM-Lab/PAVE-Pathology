@@ -89,7 +89,7 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     --splits_dir)
-      SPLIT_DIR="$2"
+      SPLITS_DIR="$2"
       shift 2
       ;;
     --threshold)
