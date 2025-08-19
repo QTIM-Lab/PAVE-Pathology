@@ -119,7 +119,7 @@ EMBED_DIM=${EMBED_DIM:-1024}
 SPLIT=${SPLIT:-test}
 ADDITIONAL_ARGS=${ADDITIONAL_ARGS:-""}
 THRESHOLD_ARG=${THRESHOLD:+"--threshold $THRESHOLD"}
-SPLITS_DIR=${SPLITS_DIR:-}
+SPLITS_DIR_ARG=${SPLITS_DIR:+"--splits_dir $SPLITS_DIR"}
 
 module load miniforge
 
@@ -132,6 +132,7 @@ echo "Save Exp Code: $SAVE_EXP_CODE"
 echo "Model Type: $MODEL_TYPE"
 echo "Split: $SPLIT"
 echo "Threshold: ${THRESHOLD:-Not Set}"
+echo "Splits Dir: ${SPLITS_DIR:-Not Set}"
 echo "Additional Args: ${ADDITIONAL_ARGS:-None}"
 
 python eval.py \
@@ -144,7 +145,7 @@ python eval.py \
    --drop_out $DROP_OUT \
    --embed_dim $EMBED_DIM \
    --split $SPLIT \
-   --splits_dir $SPLITS_DIR \
+   $SPLITS_DIR_ARG \
    $THRESHOLD_ARG \
    $ADDITIONAL_ARGS
 
