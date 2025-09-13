@@ -180,7 +180,7 @@ if args.task == 'task_1_tumor_vs_normal':
                             seed = args.seed, 
                             print_info = True,
                             label_dict = {'normal_tissue':0, 'tumor_tissue':1},
-                            patient_strat=False,
+                            patient_strat=True,
                             ignore=[])
 
 elif args.task == 'task_2_tumor_subtyping':
@@ -191,7 +191,7 @@ elif args.task == 'task_2_tumor_subtyping':
                             seed = args.seed, 
                             print_info = True,
                             label_dict = {'subtype_1':0, 'subtype_2':1, 'subtype_3':2},
-                            patient_strat= False,
+                            patient_strat= True,
                             ignore=[])
 
     if args.model_type in ['clam_sb', 'clam_mb']:
@@ -205,7 +205,7 @@ elif args.task == 'pathology_full_subtyping':
                             seed = args.seed, 
                             print_info = True,
                             label_dict = {'insufficient':0, 'normal':1, 'low_grade':2, 'high_grade':3, 'cancer':4},# 'atypia':5},
-                            patient_strat=False,
+                            patient_strat=True,
                             ignore=[])
     # We should be using clam_mb and subtyping
     if args.model_type != 'clam_mb':
@@ -223,7 +223,7 @@ elif args.task == 'pathology_sufficiency':
                             seed = args.seed, 
                             print_info = True,
                             label_dict = {'insufficient':0, 'sufficient':1},
-                            patient_strat=False,
+                            patient_strat=True,
                             ignore=[],)
     # We should be using clam_sb and not subtyping
     if args.model_type != 'clam_sb':
@@ -241,7 +241,7 @@ elif args.task == 'pathology_sufficiency_subtyping':
                             seed = args.seed, 
                             print_info = True,
                             label_dict = {'sufficient':0, 'blurry':1, 'insufficient':2},
-                            patient_strat=False,
+                            patient_strat=True,
                             ignore=[],)
     # We should be using clam_mb and subtyping
     if args.model_type != 'clam_mb':
@@ -259,7 +259,7 @@ elif args.task == 'pathology_normalcy':
                             seed = args.seed, 
                             print_info = True,
                             label_dict = {'normal':0, 'abnormal':1},
-                            patient_strat=False,
+                            patient_strat=True,
                             ignore=[],)
     # We should be using clam_sb and not subtyping
     if args.model_type != 'clam_sb':
@@ -277,7 +277,7 @@ elif args.task == 'pathology_management':
                             seed = args.seed, 
                             print_info = True,
                             label_dict = {'follow_up':0, 'treatment':1},
-                            patient_strat=False,
+                            patient_strat=True,
                             ignore=[],)
     # We should be using clam_sb and not subtyping
     if args.model_type != 'clam_sb':
@@ -294,7 +294,7 @@ elif args.task == 'pathology_abnormal_subtyping':
                             seed = args.seed, 
                             print_info = True,
                             label_dict = {'low_grade':0, 'high_grade':1, 'cancer':2},
-                            patient_strat=False,
+                            patient_strat=True,
                             ignore=[],)
     # We should be using clam_mb and subtyping
     if args.model_type != 'clam_mb':
