@@ -102,7 +102,7 @@ if __name__ == "__main__":
     # Sufficiency Model
     dataset = gen_dataset(df)
     args.n_classes = 2
-    inference(df, 'suff_pred', args, suff_model_ckpt, dataset, threshold=0.8)
+    inference(df, 'suff_pred', args, suff_model_ckpt, dataset, threshold=0.9)
 
     # Normalcy Model
     # Only keep slides predicted as sufficient (suff_pred == 1)
@@ -110,7 +110,7 @@ if __name__ == "__main__":
     if len(norm_df) > 0:
         norm_dataset = gen_dataset(norm_df)
         args.n_classes = 2
-        inference(df, 'norm_pred', args, norm_model_ckpt, norm_dataset, threshold=0.06)
+        inference(df, 'norm_pred', args, norm_model_ckpt, norm_dataset, threshold=0.04)
     else:
         print("No slides predicted as sufficient for normalcy model.")
 
