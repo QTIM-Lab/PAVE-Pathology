@@ -25,9 +25,9 @@ parser.add_argument('--save_exp_code', type=str, default='end_to_end',
                     help='experiment code to save eval results')
 parser.add_argument('--test_csv', type=str, default="e2e_test.csv")
 
-parser.add_argument('--suff_model_exp_code', type=str, default='e2e_sufficiency_s1')
-parser.add_argument('--norm_model_exp_code', type=str, default='e2e_normalcy_s1')
-parser.add_argument('--priority_model_exp_code', type=str, default='e2e_priority_s1')
+parser.add_argument('--suff_model_exp_code', type=str, default='e2e_sufficiency_NEW_s1')
+parser.add_argument('--norm_model_exp_code', type=str, default='e2e_normalcy_NEW_s1')
+parser.add_argument('--priority_model_exp_code', type=str, default='e2e_priority_NEW_s1')
 
 parser.add_argument('--drop_out', type=float, default=0.25, help='dropout')
 parser.add_argument('--embed_dim', type=int, default=1024)
