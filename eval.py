@@ -65,6 +65,8 @@ os.makedirs(args.save_dir, exist_ok=True)
 
 if args.splits_dir is None:
     args.splits_dir = args.models_dir
+else:
+    args.splits_dir = os.path.join('splits', str(args.splits_dir))
 
 assert os.path.isdir(args.models_dir)
 assert os.path.isdir(args.splits_dir)
