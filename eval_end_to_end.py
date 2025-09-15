@@ -110,7 +110,7 @@ if __name__ == "__main__":
     if len(norm_df) > 0:
         norm_dataset = gen_dataset(norm_df)
         args.n_classes = 2
-        inference(df, 'norm_pred', args, norm_model_ckpt, norm_dataset, threshold=0.02)
+        inference(df, 'norm_pred', args, norm_model_ckpt, norm_dataset, threshold=0.01)
     else:
         print("No slides predicted as sufficient for normalcy model.")
 
