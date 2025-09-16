@@ -113,6 +113,7 @@ parser.add_argument('--task', type=str, choices=[
     "pathology_full_subtyping", 
     "pathology_sufficiency", 
     "pathology_normalcy", 
+    "pathology_normalcy_aug",
     "pathology_sufficiency_subtyping",
     "pathology_management",
     "pathology_abnormal_subtyping"
@@ -254,6 +255,24 @@ elif args.task == 'pathology_sufficiency_subtyping':
 elif args.task == 'pathology_normalcy':
     args.n_classes=2
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_normalcy.csv',
+                            data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
+                            shuffle = False, 
+                            seed = args.seed, 
+                            print_info = True,
+                            label_dict = {'normal':0, 'abnormal':1},
+                            patient_strat=True,
+                            ignore=[],)
+    # We should be using clam_sb and not subtyping
+    if args.model_type != 'clam_sb':
+        args.model_type = 'clam_sb'
+        print(f"Warning: For 'pathology_normalcy', model_type should be {args.model_type}. Overriding.")
+    if args.subtyping:
+        args.subtyping = False
+        print(f"Warning: For 'pathology_normalcy', subtyping should be {args.subtyping}. Overriding.")
+
+elif args.task == 'pathology_normalcy_aug':
+    args.n_classes=2
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_normalcy_aug.csv',
                             data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
                             shuffle = False, 
                             seed = args.seed, 
