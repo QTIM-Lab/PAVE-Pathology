@@ -45,6 +45,7 @@ parser.add_argument('--task', type=str, choices=[
     'pathology_full_subtyping', 
     'pathology_sufficiency', 
     'pathology_normalcy',
+    'pathology_normalcy_aug',
     'pathology_sufficiency_subtyping',
     'pathology_management',
     'pathology_normalcy_unreviewed',
