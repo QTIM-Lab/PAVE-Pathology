@@ -31,6 +31,11 @@ parser.add_argument('--priority_model_exp_code', type=str, default='e2e_priority
 
 parser.add_argument('--drop_out', type=float, default=0.25, help='dropout')
 parser.add_argument('--embed_dim', type=int, default=1024)
+
+# New arguments for sufficiency and normalcy thresholds
+parser.add_argument('--suff_threshold', type=float, default=0.2, help='Threshold for sufficiency model')
+parser.add_argument('--norm_threshold', type=float, default=0.01, help='Threshold for normalcy model')
+
 args = parser.parse_args()
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -102,7 +107,7 @@ if __name__ == "__main__":
     # Sufficiency Model
     dataset = gen_dataset(df)
     args.n_classes = 2
-    inference(df, 'suff_pred', args, suff_model_ckpt, dataset, threshold=0.2)
+    inference(df, 'suff_pred', args, suff_model_ckpt, dataset, threshold=args.suff_threshold)
 
     # Normalcy Model
     # Only keep slides predicted as sufficient (suff_pred == 1)
@@ -110,7 +115,7 @@ if __name__ == "__main__":
     if len(norm_df) > 0:
         norm_dataset = gen_dataset(norm_df)
         args.n_classes = 2
-        inference(df, 'norm_pred', args, norm_model_ckpt, norm_dataset, threshold=0.01)
+        inference(df, 'norm_pred', args, norm_model_ckpt, norm_dataset, threshold=args.norm_threshold)
     else:
         print("No slides predicted as sufficient for normalcy model.")
 
@@ -131,6 +136,6 @@ if __name__ == "__main__":
 '''
 module load miniforge
 conda activate clam_latest
-CUDA_VISIBLE_DEVICES=0 python eval_end_to_end.py
+CUDA_VISIBLE_DEVICES=0 python eval_end_to_end.py --norm_model_exp_code e2e_normalcy_aug_s1 --save_exp_code end_to_end_aug
 
 '''

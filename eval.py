@@ -92,7 +92,7 @@ if args.task == 'task_1_tumor_vs_normal':
                             shuffle = False, 
                             print_info = True,
                             label_dict = {'normal_tissue':0, 'tumor_tissue':1},
-                            patient_strat=False,
+                            patient_strat=True,
                             ignore=[])
 
 elif args.task == 'task_2_tumor_subtyping':
@@ -113,7 +113,7 @@ elif args.task == 'pathology_full_subtyping':
                             shuffle = False, 
                             print_info = True,
                             label_dict = args.label_dict,
-                            patient_strat=False,
+                            patient_strat=True,
                             ignore=[])
 
 elif args.task == 'pathology_sufficiency':
@@ -124,7 +124,7 @@ elif args.task == 'pathology_sufficiency':
                             shuffle = False, 
                             print_info = True,
                             label_dict = args.label_dict,
-                            patient_strat=False,
+                            patient_strat=True,
                             ignore=[])
 
 elif args.task == 'pathology_normalcy':
@@ -135,7 +135,18 @@ elif args.task == 'pathology_normalcy':
                             shuffle = False, 
                             print_info = True,
                             label_dict = args.label_dict,
-                            patient_strat=False,
+                            patient_strat=True,
+                            ignore=[])
+
+elif args.task == 'pathology_normalcy_aug':
+    args.n_classes=2
+    args.label_dict = {'normal':0, 'abnormal':1}
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_normalcy_aug.csv',
+                            data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
+                            shuffle = False, 
+                            print_info = True,
+                            label_dict = args.label_dict,
+                            patient_strat=True,
                             ignore=[])
 
 elif args.task == 'pathology_sufficiency_subtyping':
@@ -146,7 +157,7 @@ elif args.task == 'pathology_sufficiency_subtyping':
                             shuffle = False, 
                             print_info = True,
                             label_dict = args.label_dict,
-                            patient_strat=False,
+                            patient_strat=True,
                             ignore=[])
 
 elif args.task == 'pathology_management':
@@ -157,7 +168,7 @@ elif args.task == 'pathology_management':
                             shuffle = False, 
                             print_info = True,
                             label_dict = args.label_dict,
-                            patient_strat=False,
+                            patient_strat=True,
                             ignore=[])
     
 elif args.task == 'pathology_normalcy_unreviewed':
@@ -169,7 +180,7 @@ elif args.task == 'pathology_normalcy_unreviewed':
                             shuffle = False, 
                             print_info = True,
                             label_dict = args.label_dict,
-                            patient_strat=False,
+                            patient_strat=True,
                             ignore=[])
 
 elif args.task == 'pathology_sufficiency_unreviewed':
@@ -181,7 +192,7 @@ elif args.task == 'pathology_sufficiency_unreviewed':
                             shuffle = False, 
                             print_info = True,
                             label_dict = args.label_dict,
-                            patient_strat=False,
+                            patient_strat=True,
                             ignore=[])
     
 elif args.task == 'pathology_abnormal_subtyping':
@@ -192,7 +203,7 @@ elif args.task == 'pathology_abnormal_subtyping':
                             shuffle = False, 
                             print_info = True,
                             label_dict = args.label_dict,
-                            patient_strat=False,
+                            patient_strat=True,
                             ignore=[])
 
 else:
