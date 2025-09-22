@@ -34,7 +34,7 @@ parser.add_argument('--embed_dim', type=int, default=1024)
 
 # New arguments for sufficiency and normalcy thresholds
 parser.add_argument('--suff_threshold', type=float, default=0.2, help='Threshold for sufficiency model')
-parser.add_argument('--norm_threshold', type=float, default=0.01, help='Threshold for normalcy model')
+parser.add_argument('--norm_threshold', type=float, default=0.02, help='Threshold for normalcy model')
 
 args = parser.parse_args()
 
