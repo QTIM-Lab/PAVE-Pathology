@@ -20,11 +20,19 @@ The arguments to this script are the same as the arguments to eval.py itself, i.
 
 Sample uses are given below:
 
-sbatch eval_template.sh --task pathology_normalcy --models_exp_code normalcy_1_s1 --save_exp_code normalcy_val --model_type clam_sb --split val
-sbatch eval_template.sh --task pathology_normalcy --models_exp_code normalcy_1_s1 --save_exp_code normalcy_test --model_type clam_sb --split test --threshold 0.06
+source eval_template.sh --task pathology_normalcy --models_exp_code normalcy_s1 --save_exp_code normalcy_val --model_type clam_sb --split val
+source eval_template.sh --task pathology_normalcy --models_exp_code normalcy_s1 --save_exp_code normalcy_test --model_type clam_sb --split test --threshold 0.06
 
-sbatch eval_template.sh --task pathology_sufficiency --models_exp_code sufficiency_1_s1 --save_exp_code sufficiency_val --model_type clam_sb --split val
-sbatch eval_template.sh --task pathology_sufficiency --models_exp_code sufficiency_1_s1 --save_exp_code sufficiency_test --model_type clam_sb --split test --threshold 0.8
+source eval_template.sh --task pathology_sufficiency --models_exp_code sufficiency_s1 --save_exp_code sufficiency_val --model_type clam_sb --split val
+source eval_template.sh --task pathology_sufficiency --models_exp_code sufficiency_s1 --save_exp_code sufficiency_test --model_type clam_sb --split test --threshold 0.8
+
+source eval_template.sh --task pathology_abnormal_subtyping --models_exp_code priority_s1 --save_exp_code abnormal_subtyping_test --model_type clam_mb --split test
+
+source eval_template.sh --task pathology_full_subtyping --models_exp_code full_subtyping_patient_strat_s1 --save_exp_code full_subtyping_patient_strat --model_type clam_mb --split test
+
+
+
+
 
 sbatch eval_template.sh --task pathology_sufficiency_subtyping --models_exp_code sufficiency_subtyping_s1 --save_exp_code sufficiency_subtyping_val --model_type clam_mb --split val
 sbatch eval_template.sh --task pathology_sufficiency_subtyping --models_exp_code sufficiency_subtyping_s1 --save_exp_code sufficiency_subtyping_test --model_type clam_mb --split test --threshold ???
@@ -36,12 +44,13 @@ sbatch eval_template.sh --task pathology_normalcy_unreviewed --models_exp_code n
 
 sbatch eval_template.sh --task pathology_sufficiency_unreviewed --models_exp_code sufficiency_1_s1 --save_exp_code sufficiency_unreviewed_val --model_type clam_sb --split all --threshold 0.8
 
-source eval_template.sh --task pathology_abnormal_subtyping --models_exp_code abnormal_subtyping_s1 --save_exp_code abnormal_subtyping_test --model_type clam_mb --split test
 
 
 
-source eval_template.sh --task pathology_sufficiency --models_exp_code e2e_sufficiency_s1 --save_exp_code e2e_sufficiency --model_type clam_sb --split val --splits_dir e2e_sufficiency
-source eval_template.sh --task pathology_normalcy --models_exp_code e2e_normalcy_s1 --save_exp_code e2e_normalcy --model_type clam_sb --split val --splits_dir e2e_normalcy
+source eval_template.sh --task pathology_sufficiency --models_exp_code e2e_sufficiency_NEW_s1 --save_exp_code e2e_sufficiency_NEW --model_type clam_sb --split val --splits_dir e2e_sufficiency
+source eval_template.sh --task pathology_normalcy --models_exp_code e2e_normalcy_NEW_s1 --save_exp_code e2e_normalcy_NEW --model_type clam_sb --split val --splits_dir e2e_normalcy
+
+source eval_template.sh --task pathology_normalcy_aug --models_exp_code e2e_normalcy_aug_s1 --save_exp_code e2e_normalcy_aug --model_type clam_sb --split val --splits_dir e2e_sufficiency
 
 source eval_template.sh --task pathology_sufficiency --models_exp_code e2e_sufficiency_s1 --save_exp_code e2e_sufficiency --model_type clam_sb --split test --splits_dir e2e_sufficiency
 source eval_template.sh --task pathology_normalcy --models_exp_code e2e_normalcy_s1 --save_exp_code e2e_normalcy --model_type clam_sb --split test --splits_dir e2e_normalcy
@@ -135,7 +144,7 @@ echo "Threshold: ${THRESHOLD:-Not Set}"
 echo "Splits Dir: ${SPLITS_DIR:-Not Set}"
 echo "Additional Args: ${ADDITIONAL_ARGS:-None}"
 
-python eval.py \
+CUDA_VISIBLE_DEVICES=0 python eval.py \
    --task $TASK \
    --save_exp_code $SAVE_EXP_CODE \
    --models_exp_code $MODELS_EXP_CODE \
