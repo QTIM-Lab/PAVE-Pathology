@@ -124,12 +124,21 @@ def summary(model, loader, args):
         slide_id = slide_ids.iloc[batch_idx]
         with torch.no_grad():
             logits, Y_prob, Y_hat, _, results_dict = model(h=data, coords=coords)
-        
-        if args.n_classes == 2 and args.threshold is not None:
+
+        # --- Multiclass: require higher confidence for some classes via probability adjustment ---
+        # If args.prob_adjust is provided (list/array of length n_classes), add to the logits before softmax
+        # This makes the model require higher confidence for some classes to select them
+        if args.n_classes > 2 and hasattr(args, 'prob_adjust') and args.prob_adjust is not None:
+            # prob_adjust should be a list or array of length n_classes, e.g. [0.0, 0.2, 0.1]
+            adjust = torch.tensor(args.prob_adjust, device=logits.device)
+            adjusted_logits = logits - adjust  # Subtract to require higher logit for those classes
+            Y_prob = torch.softmax(adjusted_logits, dim=1)
+            Y_hat = Y_prob.argmax(dim=1)
+        elif args.n_classes == 2 and hasattr(args, 'threshold') and args.threshold is not None:
             Y_hat = (Y_prob[:, 1] >= args.threshold).long()
-        
+
         acc_logger.log(Y_hat, label)
-        
+
         probs = Y_prob.cpu().numpy()
 
         all_probs[batch_idx] = probs

@@ -51,10 +51,12 @@ parser.add_argument('--task', type=str, choices=[
     'pathology_normalcy_unreviewed',
     'pathology_sufficiency_unreviewed',
     'pathology_abnormal_subtyping',
+    'pathology_full_subtyping_adjusted'
     ])
 parser.add_argument('--drop_out', type=float, default=0.25, help='dropout')
 parser.add_argument('--embed_dim', type=int, default=1024)
 parser.add_argument('--threshold', type=float, default=None, help='decision threshold for binary classification')
+
 args = parser.parse_args()
 
 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -108,6 +110,18 @@ elif args.task == 'task_2_tumor_subtyping':
 
 elif args.task == 'pathology_full_subtyping':
     args.n_classes=5 #6
+    args.label_dict = {'insufficient':0, 'normal':1, 'low_grade':2, 'high_grade':3, 'cancer':4}# 'atypia':5}
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_full_subtyping.csv',
+                            data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
+                            shuffle = False, 
+                            print_info = True,
+                            label_dict = args.label_dict,
+                            patient_strat=True,
+                            ignore=[])
+
+elif args.task == 'pathology_full_subtyping_adjusted':
+    args.n_classes=5 #6
+    args.prod_adjust = [0.2, 0.2, 0.0, -0.1, 0.0]
     args.label_dict = {'insufficient':0, 'normal':1, 'low_grade':2, 'high_grade':3, 'cancer':4}# 'atypia':5}
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_full_subtyping.csv',
                             data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
