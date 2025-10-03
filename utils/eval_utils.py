@@ -129,7 +129,7 @@ def summary(model, loader, args):
         # If args.prob_adjust is provided (list/array of length n_classes), add to the logits before softmax
         # This makes the model require higher confidence for some classes to select them
         if args.n_classes > 2 and hasattr(args, 'prob_adjust') and args.prob_adjust is not None:
-            # prob_adjust should be a list or array of length n_classes, e.g. [0.0, 0.2, 0.1]
+            # prob_adjust should be a list or array of length n_classes
             adjust = torch.tensor(args.prob_adjust, device=logits.device)
             adjusted_logits = logits - adjust  # Subtract to require higher logit for those classes
             Y_prob = torch.softmax(adjusted_logits, dim=1)
