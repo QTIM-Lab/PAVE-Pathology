@@ -3,6 +3,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.optim as optim
 from models.model_mil import MIL_fc, MIL_fc_mc
 from models.model_clam import CLAM_SB, CLAM_MB
 import pdb
@@ -16,6 +17,48 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 unused import
 from itertools import cycle
+
+class TemperatureScaler(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.log_T = nn.Parameter(torch.zeros(1))
+
+    def forward(self, logits):
+        T = torch.exp(self.log_T)
+        return logits / T
+
+def fit_temperature(val_logits: torch.Tensor, val_labels: torch.Tensor, max_iter: int = 200):
+    """
+    Fit a single temperature by minimizing cross-entropy on provided logits/labels.
+    - val_logits: [N, C]
+    - val_labels: [N]
+    Returns the learned scalar temperature (float) and a TemperatureScaler module.
+    """
+    scaler = TemperatureScaler().to(val_logits.device)
+    criterion = nn.CrossEntropyLoss()
+
+    # LBFGS often converges quickly for a single parameter
+    optimizer = optim.LBFGS(scaler.parameters(), lr=0.1, max_iter=50)
+
+    def closure():
+        optimizer.zero_grad()
+        scaled = scaler(val_logits)
+        loss = criterion(scaled, val_labels)
+        loss.backward()
+        return loss
+
+    optimizer.step(closure)
+
+    # Light Adam refinement
+    adam = optim.Adam(scaler.parameters(), lr=1e-2)
+    for _ in range(max_iter):
+        adam.zero_grad()
+        loss = criterion(scaler(val_logits), val_labels)
+        loss.backward()
+        adam.step()
+
+    T = torch.exp(scaler.log_T).item()
+    return T, scaler
 
 def plot_multiclass_roc(all_labels, all_probs, n_classes, save_dir, class_labels):
     all_labels_b = label_binarize(all_labels, classes=range(n_classes))
@@ -111,56 +154,77 @@ def summary(model, loader, args):
     acc_logger = Accuracy_Logger(n_classes=args.n_classes)
     model.eval()
     test_loss = 0.
-    test_error = 0.
 
-    all_probs = np.zeros((len(loader), args.n_classes))
-    all_labels = np.zeros(len(loader))
-    all_preds = np.zeros(len(loader))
-
+    # First pass: collect logits, labels, and slide_ids
     slide_ids = loader.dataset.slide_data['slide_id']
-    patient_results = {}
+    logits_list = []
+    labels_list = []
+    slide_id_list = []
     for batch_idx, (data, coords, label) in enumerate(loader):
         data, coords, label = data.to(device), coords.to(device), label.to(device)
-        slide_id = slide_ids.iloc[batch_idx]
         with torch.no_grad():
-            logits, Y_prob, Y_hat, _, results_dict = model(h=data, coords=coords)
+            logits, _, _, _, _ = model(h=data, coords=coords)
+        logits_list.append(logits.detach().cpu())
+        labels_list.append(label.detach().cpu())
+        slide_id_list.append(slide_ids.iloc[batch_idx])
 
-        # --- Multiclass: require higher confidence for some classes via probability adjustment ---
-        # If args.prob_adjust is provided (list/array of length n_classes), add to the logits before softmax
-        # This makes the model require higher confidence for some classes to select them
-        if args.n_classes > 2 and hasattr(args, 'prob_adjust') and args.prob_adjust is not None:
-            # prob_adjust should be a list or array of length n_classes
-            adjust = torch.tensor(args.prob_adjust, device=logits.device)
-            adjusted_logits = logits - adjust  # Subtract to require higher logit for those classes
-            Y_prob = torch.softmax(adjusted_logits, dim=1)
-            Y_hat = Y_prob.argmax(dim=1)
-        elif args.n_classes == 2 and hasattr(args, 'threshold') and args.threshold is not None:
-            Y_hat = (Y_prob[:, 1] >= args.threshold).long()
+    # Stack collected tensors
+    all_logits = torch.cat(logits_list, dim=0)
+    all_tlabels = torch.cat(labels_list, dim=0).long()
 
-        acc_logger.log(Y_hat, label)
+    # Apply class-specific probability adjustment to logits if provided
+    if args.n_classes > 2 and hasattr(args, 'prob_adjust') and args.prob_adjust is not None:
+        adjust = torch.tensor(args.prob_adjust, device=all_logits.device, dtype=all_logits.dtype)
+        logits_for_calib = all_logits - adjust
+    else:
+        logits_for_calib = all_logits
 
-        probs = Y_prob.cpu().numpy()
+    # Temperature handling: either optimize or use provided
+    T = 1.0
+    if hasattr(args, 'temperature_optimize') and args.temperature_optimize:
+        T, _ = fit_temperature(logits_for_calib, all_tlabels)
+        print(f"Fitted temperature: {T:.4f}")
+    elif hasattr(args, 'temperature') and args.temperature is not None:
+        T = float(args.temperature)
+        print(f"Using provided temperature: {T:.4f}")
 
-        all_probs[batch_idx] = probs
-        all_labels[batch_idx] = label.item()
-        all_preds[batch_idx] = Y_hat.item()
-        
-        patient_results.update({slide_id: {'slide_id': np.array(slide_id), 'prob': probs, 'label': label.item()}})
-        
-        error = calculate_error(Y_hat, label)
-        test_error += error
+    # Compute probabilities and predictions using temperature
+    scaled_logits = logits_for_calib / T
+    Y_prob_all = torch.softmax(scaled_logits, dim=1)
 
-        if hasattr(args, 'save_intermediate_results') and args.save_intermediate_results:
+    if args.n_classes == 2 and hasattr(args, 'threshold') and args.threshold is not None:
+        Y_hat_all = (Y_prob_all[:, 1] >= args.threshold).long()
+    else:
+        Y_hat_all = Y_prob_all.argmax(dim=1)
 
-            results_dict = {'slide_id': slide_ids, 'Y': all_labels, 'Y_hat': all_preds}
-            for c in range(args.n_classes):
-                results_dict.update({'p_{}'.format(c): all_probs[:,c]})
-            df = pd.DataFrame(results_dict)
+    # Build outputs and metrics
+    all_probs = Y_prob_all.numpy()
+    all_labels = all_tlabels.numpy()
+    all_preds = Y_hat_all.numpy()
 
-            df.to_csv(os.path.join(args.save_dir, 'intermediate_results.csv'), index=False)
+    # Accuracy logger and error
+    acc_logger = Accuracy_Logger(n_classes=args.n_classes)
+    total_error = 0.0
+    for i in range(len(all_labels)):
+        y_hat_tensor = torch.tensor(all_preds[i]).view(1)
+        y_tensor = torch.tensor(all_labels[i]).view(1)
+        acc_logger.log(y_hat_tensor, y_tensor)
+        total_error += calculate_error(y_hat_tensor, y_tensor)
 
-    del data
-    test_error /= len(loader)
+    test_error = total_error / len(all_labels)
+
+    # patient_results
+    patient_results = {}
+    for i, slide_id in enumerate(slide_id_list):
+        patient_results.update({slide_id: {'slide_id': np.array(slide_id), 'prob': all_probs[i], 'label': int(all_labels[i])}})
+
+    # Save intermediate results if requested
+    if hasattr(args, 'save_intermediate_results') and args.save_intermediate_results:
+        results_dict_inter = {'slide_id': slide_ids, 'Y': all_labels, 'Y_hat': all_preds}
+        for c in range(args.n_classes):
+            results_dict_inter.update({'p_{}'.format(c): all_probs[:,c]})
+        df_inter = pd.DataFrame(results_dict_inter)
+        df_inter.to_csv(os.path.join(args.save_dir, 'intermediate_results.csv'), index=False)
 
     # Generate confusion matrix
     cm = confusion_matrix(all_labels, all_preds)
