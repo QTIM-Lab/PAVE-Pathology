@@ -56,6 +56,9 @@ parser.add_argument('--task', type=str, choices=[
 parser.add_argument('--drop_out', type=float, default=0.25, help='dropout')
 parser.add_argument('--embed_dim', type=int, default=1024)
 parser.add_argument('--threshold', type=float, default=None, help='decision threshold for binary classification')
+parser.add_argument('--temperature_optimize', action='store_true', default=False,
+                    help='optimize temperature scaling on validation set for probability calibration (default: False)')
+parser.add_argument('--temperature', type=float, default=1.0, help='temperature for scaling (default: 1.0)')
 
 args = parser.parse_args()
 

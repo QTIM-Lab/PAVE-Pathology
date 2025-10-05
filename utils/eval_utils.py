@@ -246,7 +246,7 @@ def summary(model, loader, args):
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
                 xticklabels=class_labels,
                 yticklabels=class_labels)
-    plt.title('Confusion Matrix')
+    plt.title('Confusion Matrix: Temp={}'.format(T))
     plt.ylabel('True Label')
     plt.xlabel('Predicted Label')
     
