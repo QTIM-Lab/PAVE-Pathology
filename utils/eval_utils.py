@@ -194,6 +194,9 @@ def summary(model, loader, args):
 
     if args.n_classes == 2 and hasattr(args, 'threshold') and args.threshold is not None:
         Y_hat_all = (Y_prob_all[:, 1] >= args.threshold).long()
+    elif hasattr(args, 'thresholds') and args.thresholds is not None and len(args.thresholds) == args.n_classes:
+        thresholds = torch.tensor(args.thresholds, device=Y_prob_all.device)
+        Y_hat_all = (Y_prob_all >= thresholds).long().argmax(dim=1)
     else:
         Y_hat_all = Y_prob_all.argmax(dim=1)
 
