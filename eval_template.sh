@@ -20,6 +20,8 @@ The arguments to this script are the same as the arguments to eval.py itself, i.
 
 Sample uses are given below:
 
+
+
 source eval_template.sh --task pathology_normalcy --models_exp_code normalcy_s1 --save_exp_code normalcy_val --model_type clam_sb --split val
 source eval_template.sh --task pathology_normalcy --models_exp_code normalcy_s1 --save_exp_code normalcy_test --model_type clam_sb --split test --threshold 0.06
 
@@ -28,7 +30,17 @@ source eval_template.sh --task pathology_sufficiency --models_exp_code sufficien
 
 source eval_template.sh --task pathology_abnormal_subtyping --models_exp_code priority_s1 --save_exp_code abnormal_subtyping_test --model_type clam_mb --split test
 
-source eval_template.sh --task pathology_full_subtyping --models_exp_code full_subtyping_patient_strat_s1 --save_exp_code full_subtyping_patient_strat --model_type clam_mb --split test
+source eval_template.sh --task pathology_full_subtyping --models_exp_code full_subtyping_patient_strat_s1 --save_exp_code full_subtyping_patient_strat--model_type clam_mb --split test
+
+
+source eval_template.sh --task pathology_full_subtyping_adjusted --models_exp_code full_subtyping_patient_strat_s1 --save_exp_code full_subtyping_patient_adjusted --model_type clam_mb --split val
+source eval_template.sh --task pathology_full_subtyping_adjusted --models_exp_code flagship_s1 --save_exp_code flagship_temp2 --model_type clam_mb --split val
+
+
+source eval_template.sh --task pathology_full_subtyping_adjusted --models_exp_code flagship_s1 --save_exp_code flagship_temp2 --model_type clam_mb --split val --temperature 3.0
+
+
+source eval_template.sh --task pathology_full_subtyping_adjusted --models_exp_code flagship_s1 --save_exp_code flagship_FINAL --model_type clam_mb --split test --temperature 1.5
 
 
 
@@ -105,6 +117,10 @@ while [[ $# -gt 0 ]]; do
       THRESHOLD="$2"
       shift 2
       ;;
+    --temperature)
+      TEMPERATURE="$2"
+      shift 2
+      ;;
     --additional_args)
       ADDITIONAL_ARGS="$2"
       shift 2
@@ -128,6 +144,7 @@ EMBED_DIM=${EMBED_DIM:-1024}
 SPLIT=${SPLIT:-test}
 ADDITIONAL_ARGS=${ADDITIONAL_ARGS:-""}
 THRESHOLD_ARG=${THRESHOLD:+"--threshold $THRESHOLD"}
+TEMPERATURE_ARG=${TEMPERATURE:+"--temperature $TEMPERATURE"}
 SPLITS_DIR_ARG=${SPLITS_DIR:+"--splits_dir $SPLITS_DIR"}
 
 module load miniforge
@@ -142,6 +159,7 @@ echo "Model Type: $MODEL_TYPE"
 echo "Split: $SPLIT"
 echo "Threshold: ${THRESHOLD:-Not Set}"
 echo "Splits Dir: ${SPLITS_DIR:-Not Set}"
+echo "Temperature: ${TEMPERATURE:-Not Set}"
 echo "Additional Args: ${ADDITIONAL_ARGS:-None}"
 
 CUDA_VISIBLE_DEVICES=0 python eval.py \
@@ -156,6 +174,7 @@ CUDA_VISIBLE_DEVICES=0 python eval.py \
    --split $SPLIT \
    $SPLITS_DIR_ARG \
    $THRESHOLD_ARG \
+   $TEMPERATURE_ARG \
    $ADDITIONAL_ARGS
 
 
