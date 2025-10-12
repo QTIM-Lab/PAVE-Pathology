@@ -12,7 +12,7 @@ The hard drives contain the raw .svs WSIs and the DICOM data, as well as an encr
 
 The software lacks modern scrolling and selecting functionality, so in order to select a large amount of files, I have found that the best way is to select one file, scroll to the last desired file, hold `Shift+Cmd`, and _drag_ up/down to that last desired file. The `Cmd` key works to select multiple discontiguous files, but _only when you drag to select/unselect a few_. If you simply select one, hold `Shift`, and select another, it unselects.
 
-It is recommended to select as the decryption destination directory a remote mount (via `sshfs`) of the target directory on the desired server, so as to forgo the need to perofmr an additional transfer.
+It is recommended to select as the decryption destination directory a remote mount (via `sshfs`) of the target directory on the desired server, so as to forgo the need to perform an additional transfer.
 
 The only two hard drives we currently have are `navyblue` and `pv3`, so the following documentation is phrased in terms of these two drives. We are expecting to receive at least one more.
 
