@@ -10,7 +10,7 @@ This repository contains scripts and templates for running segmentation and patc
 
 The hard drives contain the raw .svs WSIs and the DICOM data, as well as an encrypted file viewer software, which is the only way to access these files. **There is no known way to access or manipulate the contents of the drives via the command line**.
 
-The software lacks modern scrolling and selecting functionality, so in order to select a large amount of files, I have found that the best way is to select one file, scroll to the last desired file, hold `Shift+Cmd`, and _drag_ up/down to that last desired file. The `Cmd` key works to select multiple discontigious files, but _only when you drag to select/unselect a few_. If you simply select one, hold `Shift`, and select another, it unselects.
+The software lacks modern scrolling and selecting functionality, so in order to select a large amount of files, I have found that the best way is to select one file, scroll to the last desired file, hold `Shift+Cmd`, and _drag_ up/down to that last desired file. The `Cmd` key works to select multiple discontiguous files, but _only when you drag to select/unselect a few_. If you simply select one, hold `Shift`, and select another, it unselects.
 
 It is recommended to select as the decryption destination directory a remote mount (via `sshfs`) of the target directory on the desired server, so as to forgo the need to perofmr an additional transfer.
 
