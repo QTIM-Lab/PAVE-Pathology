@@ -1,0 +1,6 @@
+,train,val,test
+insufficient,1082,138,133
+normal,2235,290,280
+low_grade,257,31,29
+high_grade,511,64,68
+cancer,32,3,5
