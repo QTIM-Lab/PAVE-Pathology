@@ -5,6 +5,7 @@ import os
 from dataset_modules.dataset_generic import save_splits
 from models.model_mil import MIL_fc, MIL_fc_mc
 from models.model_clam import CLAM_MB, CLAM_SB
+from models.model_sao import SAO_MIL
 from sklearn.preprocessing import label_binarize
 from sklearn.metrics import roc_auc_score, roc_curve
 from sklearn.metrics import auc as calc_auc
@@ -155,6 +156,9 @@ def train(datasets, cur, args):
         else:
             raise NotImplementedError
     
+    elif args.model_type == 'sao':
+        model = SAO_MIL(embed_dim=args.embed_dim, n_diagnostic_classes=args.n_classes - 1, dropout=args.drop_out, use_pos_embed=args.use_pos_embed)
+
     else: # args.model_type == 'mil'
         if args.n_classes > 2:
             model = MIL_fc_mc(**model_dict)
@@ -193,6 +197,11 @@ def train(datasets, cur, args):
             stop = validate_clam(cur, epoch, model, val_loader, args.n_classes, 
                 early_stopping, writer, loss_fn, args.results_dir)
         
+        elif args.model_type == 'sao':
+            train_loop_sao(epoch, model, train_loader, optimizer, args.n_classes, args.bag_weight, writer)
+            stop = validate_sao(cur, epoch, model, val_loader, args.n_classes, 
+                early_stopping, writer, args.results_dir)
+
         else:
             train_loop(epoch, model, train_loader, optimizer, args.n_classes, writer, loss_fn)
             stop = validate(cur, epoch, model, val_loader, args.n_classes, 
@@ -211,10 +220,16 @@ def train(datasets, cur, args):
     else:
         torch.save(model.state_dict(), os.path.join(args.results_dir, "s_{}_checkpoint.pt".format(cur)))
 
-    _, val_error, val_auc, _= summary(model, val_loader, args.n_classes)
-    print('Val error: {:.4f}, ROC AUC: {:.4f}'.format(val_error, val_auc))
+    if args.model_type == 'sao':
+        _, val_error, val_auc, _ = summary_sao(model, val_loader, args.n_classes)
+        print('Val error: {:.4f}, ROC AUC: {:.4f}'.format(val_error, val_auc))
+        results_dict, test_error, test_auc, acc_logger = summary_sao(model, test_loader, args.n_classes)
+    else:
+        _, val_error, val_auc, _= summary(model, val_loader, args.n_classes)
+        print('Val error: {:.4f}, ROC AUC: {:.4f}'.format(val_error, val_auc))
+        results_dict, test_error, test_auc, acc_logger = summary(model, test_loader, args.n_classes)
 
-    results_dict, test_error, test_auc, acc_logger = summary(model, test_loader, args.n_classes)
+    print('Test error: {:.4f}, ROC AUC: {:.4f}'.format(test_error, test_auc))
     print('Test error: {:.4f}, ROC AUC: {:.4f}'.format(test_error, test_auc))
 
     for i in range(args.n_classes):
@@ -549,5 +564,158 @@ def summary(model, loader, n_classes):
 
         auc = np.nanmean(np.array(aucs))
 
+
+    return patient_results, test_error, auc, acc_logger
+
+def get_sao_prediction(results):
+    p_suff = results['p_sufficient']
+    if p_suff < 0.5:
+        return torch.tensor(0).to(p_suff.device)
+    else:
+        logits = results['logits']
+        probs = torch.sigmoid(logits)
+        # Grade 1 is base. +1 for each threshold crossed.
+        return 1 + torch.sum(probs > 0.5)
+
+def train_loop_sao(epoch, model, loader, optimizer, n_classes, bag_weight, writer=None):
+    model.train()
+    acc_logger = Accuracy_Logger(n_classes=n_classes)
+    
+    train_loss = 0.
+    train_error = 0.
+    train_inst_loss = 0.
+    successful_batches = 0
+
+    print('\n')
+    for batch_idx, (data, coords, label) in enumerate(loader):
+        data, coords, label = data.to(device), coords.to(device), label.to(device)
+        
+        # Forward pass
+        # Note: SAO_MIL forward signature: forward(self, h, coords, instance_eval=False, bag_label=None)
+        _, results = model(h=data, coords=coords, instance_eval=True, bag_label=label)
+        
+        # Calculate Loss
+        loss_main = SAO_MIL.calculate_loss(results, label)
+        loss_inst = results.get('inst_loss', torch.tensor(0.0).to(device))
+        
+        total_loss = bag_weight * loss_main + (1-bag_weight) * loss_inst
+        
+        # Logging
+        Y_hat = get_sao_prediction(results)
+        acc_logger.log(Y_hat, label)
+        
+        loss_value = total_loss.item()
+        train_loss += loss_value
+        train_inst_loss += loss_inst.item()
+        
+        error = calculate_error(Y_hat, label)
+        train_error += error
+        
+        successful_batches += 1
+        
+        # if (batch_idx + 1) % 20 == 0:
+        bag_size = data.size(0)
+        p_suff = results['p_sufficient'].item()
+        # p_ordinal is [1, n_classes-1], flatten it for cleaner printing
+        p_ord = results['p_ordinal'].detach().cpu().numpy().flatten()
+        
+        print('batch {}, size: {}, loss: {:.4f}, inst: {:.4f}, label: {}, pred: {}, p_suff: {:.2f}, p_ord: {}'.format(
+            batch_idx, bag_size, loss_value, loss_inst.item(), label.item(), Y_hat.item(), p_suff, np.round(p_ord, 2)))
+
+        # Backward pass
+        total_loss.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+
+    if successful_batches > 0:
+        train_loss /= successful_batches
+        train_error /= successful_batches
+        train_inst_loss /= successful_batches
+
+    print('Epoch: {}, train_loss: {:.4f}, train_inst_loss: {:.4f}, train_error: {:.4f}'.format(
+        epoch, train_loss, train_inst_loss, train_error))
+    
+    for i in range(n_classes):
+        acc, correct, count = acc_logger.get_summary(i)
+        print('class {}: acc {}, correct {}/{}'.format(i, acc, correct, count))
+        if writer and acc is not None:
+            writer.add_scalar('train/class_{}_acc'.format(i), acc, epoch)
+
+    if writer:
+        writer.add_scalar('train/loss', train_loss, epoch)
+        writer.add_scalar('train/error', train_error, epoch)
+
+def validate_sao(cur, epoch, model, loader, n_classes, early_stopping=None, writer=None, results_dir=None):
+    model.eval()
+    acc_logger = Accuracy_Logger(n_classes=n_classes)
+    val_loss = 0.
+    val_error = 0.
+    
+    with torch.no_grad():
+        for batch_idx, (data, coords, label) in enumerate(loader):
+            data, coords, label = data.to(device), coords.to(device), label.to(device)
+            
+            _, results = model(h=data, coords=coords)
+            
+            loss = SAO_MIL.calculate_loss(results, label)
+            val_loss += loss.item()
+            
+            Y_hat = get_sao_prediction(results)
+            acc_logger.log(Y_hat, label)
+            
+            error = calculate_error(Y_hat, label)
+            val_error += error
+
+    val_error /= len(loader)
+    val_loss /= len(loader)
+
+    print('\nVal Set, val_loss: {:.4f}, val_error: {:.4f}'.format(val_loss, val_error))
+    for i in range(n_classes):
+        acc, correct, count = acc_logger.get_summary(i)
+        print('class {}: acc {}, correct {}/{}'.format(i, acc, correct, count))     
+
+    if writer:
+        writer.add_scalar('val/loss', val_loss, epoch)
+        writer.add_scalar('val/error', val_error, epoch)
+
+    if early_stopping:
+        assert results_dir
+        early_stopping(epoch, val_loss, model, ckpt_name = os.path.join(results_dir, "s_{}_checkpoint.pt".format(cur)))
+        
+        if early_stopping.early_stop:
+            print("Early stopping")
+            return True
+
+    return False
+
+def summary_sao(model, loader, n_classes):
+    model.eval()
+    acc_logger = Accuracy_Logger(n_classes=n_classes)
+    patient_results = {}
+    
+    all_preds = []
+    all_labels = []
+
+    for batch_idx, (data, coords, label) in enumerate(loader):
+        data, coords, label = data.to(device), coords.to(device), label.to(device)
+        slide_id = loader.dataset.slide_data['slide_id'][batch_idx]
+        
+        with torch.no_grad():
+            _, results = model(h=data, coords=coords)
+        
+        Y_hat = get_sao_prediction(results)
+        acc_logger.log(Y_hat, label)
+        
+        all_preds.append(Y_hat)
+        all_labels.append(label.item())
+        
+        # For patient results, we might want to save the raw ordinal probs
+        patient_results.update({slide_id: {'slide_id': np.array(slide_id), 'pred': Y_hat, 'label': label.item()}})
+
+    test_error = 1.0 - np.sum(np.array(all_preds) == np.array(all_labels)) / len(all_labels)
+    
+    # AUC is hard for ordinal without converting to class probs. 
+    # For now, let's return 0.0 for AUC or implement a conversion if needed.
+    auc = 0.0 
 
     return patient_results, test_error, auc, acc_logger

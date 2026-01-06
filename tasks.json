@@ -1,0 +1,135 @@
+{
+   "uni_sao_testing": {
+      "n_classes": 5,
+      "csv_path": "dataset_csv/with_leeps.csv",
+      "data_dir_suffix": "uni_v1",
+      "label_dict": {"insufficient": 0, "normal": 1, "low_grade": 2, "high_grade": 3, "cancer": 4},
+      "patient_strat": true,
+      "ignore": [],
+      "shuffle": false,
+      "print_info": true,
+      "model_type": "sao",
+      "weighted_sample": true,
+      "__use_pos_embed": true
+   },
+
+   "pathology_full_subtyping": {
+      "n_classes": 5,
+      "csv_path": "dataset_csv/pathology_full_subtyping.csv",
+      "data_dir_suffix": "uni_v1",
+      "label_dict": {"insufficient": 0, "normal": 1, "low_grade": 2, "high_grade": 3, "cancer": 4},
+      "patient_strat": true,
+      "ignore": [],
+      "shuffle": false,
+      "print_info": true,
+      "model_type": "clam_mb",
+      "subtyping": true,
+      "weighted_sample": true
+   },
+   "with_leeps": {
+      "n_classes": 5,
+      "csv_path": "dataset_csv/with_leeps.csv",
+      "data_dir_suffix": "uni_v1",
+      "label_dict": {"insufficient": 0, "normal": 1, "low_grade": 2, "high_grade": 3, "cancer": 4},
+      "patient_strat": true,
+      "ignore": [],
+      "shuffle": false,
+      "print_info": true,
+      "model_type": "clam_mb",
+      "subtyping": true,
+      "weighted_sample": true
+   },
+   "no_malawi": {
+      "n_classes": 5,
+      "csv_path": "dataset_csv/no_malawi.csv",
+      "label_dict": {"insufficient": 0, "normal": 1, "low_grade": 2, "high_grade": 3, "cancer": 4},
+      "patient_strat": true,
+      "ignore": [],
+      "shuffle": false,
+      "print_info": true,
+      "model_type": "clam_mb",
+      "subtyping": true,
+      "weighted_sample": true
+   },
+
+
+   
+   "pathology_sufficiency": {
+      "n_classes": 2,
+      "csv_path": "dataset_csv/pathology_sufficiency.csv",
+      "data_dir_suffix": "pathology_features",
+      "label_dict": {"insufficient": 0, "sufficient": 1},
+      "patient_strat": true,
+      "ignore": [],
+      "shuffle": false,
+      "print_info": true,
+      "model_type": "clam_sb",
+      "subtyping": false,
+      "weighted_sample": true
+   },
+   "pathology_sufficiency_subtyping": {
+      "n_classes": 3,
+      "csv_path": "dataset_csv/pathology_sufficiency_subtyping.csv",
+      "data_dir_suffix": "pathology_features",
+      "label_dict": {"sufficient": 0, "blurry": 1, "insufficient": 2},
+      "patient_strat": true,
+      "ignore": [],
+      "shuffle": false,
+      "print_info": true,
+      "model_type": "clam_mb",
+      "subtyping": true,
+      "weighted_sample": true
+   },
+   "pathology_normalcy": {
+      "n_classes": 2,
+      "csv_path": "dataset_csv/pathology_normalcy.csv",
+      "data_dir_suffix": "pathology_features",
+      "label_dict": {"normal": 0, "abnormal": 1},
+      "patient_strat": true,
+      "ignore": [],
+      "shuffle": false,
+      "print_info": true,
+      "model_type": "clam_sb",
+      "subtyping": false,
+      "weighted_sample": true
+   },
+   "pathology_normalcy_aug": {
+      "n_classes": 2,
+      "csv_path": "dataset_csv/pathology_normalcy_aug.csv",
+      "data_dir_suffix": "pathology_features",
+      "label_dict": {"normal": 0, "abnormal": 1},
+      "patient_strat": true,
+      "ignore": [],
+      "shuffle": false,
+      "print_info": true,
+      "model_type": "clam_sb",
+      "subtyping": false,
+      "weighted_sample": true
+   },
+   "pathology_management": {
+      "n_classes": 2,
+      "csv_path": "dataset_csv/pathology_management.csv",
+      "data_dir_suffix": "pathology_features",
+      "label_dict": {"follow_up": 0, "treatment": 1},
+      "patient_strat": true,
+      "ignore": [],
+      "shuffle": false,
+      "print_info": true,
+      "model_type": "clam_sb",
+      "subtyping": false,
+      "weighted_sample": true
+   },
+   "pathology_abnormal_subtyping": {
+      "n_classes": 3,
+      "csv_path": "dataset_csv/pathology_abnormal_subtyping.csv",
+      "data_dir_suffix": "pathology_features",
+      "label_dict": {"low_grade": 0, "high_grade": 1, "cancer": 2},
+      "patient_strat": true,
+      "ignore": [],
+      "shuffle": false,
+      "print_info": true,
+      "model_type": "clam_mb",
+      "subtyping": true,
+      "weighted_sample": true
+   }
+}

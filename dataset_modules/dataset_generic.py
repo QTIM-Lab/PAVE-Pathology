@@ -343,7 +343,7 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
 				print(f"Warning: File not found: {full_path}")
 				# Return a zero tensor as fallback or skip this sample
 				# You might want to adjust this based on your needs
-				return torch.zeros(1024), torch.empty(0, 2), label  # Assuming 1024 features
+				return torch.zeros((1, 1024)), torch.zeros((1, 2)), label  # Assuming 1024 features
 			
 			with h5py.File(full_path, 'r') as hf:
 				features = hf['features'][:]
@@ -359,7 +359,7 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
 				print(f"Warning: File not found: {full_path}")
 				# Return a zero tensor as fallback or skip this sample
 				# You might want to adjust this based on your needs
-				return torch.zeros(1024), torch.empty(0, 2), label  # Assuming 1024 features
+				return torch.zeros((1, 1024)), torch.empty(0, 2), label  # Assuming 1024 features
 			features = torch.load(full_path)
 			# Return dummy coordinates if not using H5, to maintain consistent output format
 			return features, torch.empty(0, 2), label
