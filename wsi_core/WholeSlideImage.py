@@ -40,6 +40,9 @@ class WholeSlideImage(object):
     def getOpenSlide(self):
         return self.wsi
 
+    def close(self):
+        self.wsi.close()
+
     def initXML(self, xml_path):
         def _createContour(coord_list):
             return np.array([[[int(float(coord.attributes['X'].value)), 
