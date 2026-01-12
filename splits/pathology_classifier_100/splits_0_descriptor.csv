@@ -1,7 +1,0 @@
-,train,val,test
-insufficient,567,32,32
-normal,752,61,61
-low_grade,90,8,8
-high_grade,217,20,20
-cancer,15,2,2
-atypia,6,1,1
