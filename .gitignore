@@ -1,6 +1,11 @@
 **/.DS_Store
 __pycache__/
 notebooks
-
+preprocessing/
+data/
 job_logs/
 checkpoints/
+eval_results/
+dataset_csv/
+results/
+splits/
