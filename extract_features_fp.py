@@ -93,6 +93,7 @@ if __name__ == '__main__':
 		df.to_csv(os.path.join(args.feat_dir, 'post_feat_ext.csv'), index=False)
 
 		slide_id = bags_dataset[bag_candidate_idx].split(args.slide_ext)[0]
+		wsi = None
 		try:
 			bag_name = slide_id+'.h5'
 			h5_file_path = os.path.join(args.data_h5_dir, 'patches', bag_name)
@@ -128,10 +129,13 @@ if __name__ == '__main__':
 			features = torch.from_numpy(features)
 			bag_base, _ = os.path.splitext(bag_name)
 			torch.save(features, os.path.join(args.feat_dir, 'pt_files', bag_base+'.pt'))
+			wsi.close()
 		except Exception as e:
 			print(f"Error processing {slide_id}: {e}")
 			df.loc[df['slide_id'] == slide_id, 'status'] = 'failed_ext'
 			df.loc[df['slide_id'] == slide_id, 'error'] = str(e)
+			if wsi is not None:
+				wsi.close()
 			continue
 	df.to_csv(os.path.join(args.feat_dir, 'post_feat_ext.csv'), index=False)
 

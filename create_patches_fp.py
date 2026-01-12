@@ -104,7 +104,7 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 
 		# Inialize WSI
 		full_path = os.path.join(source, slide)
-		
+		WSI_object = None
 		try:
 			WSI_object = WholeSlideImage(full_path)
 			if use_default_params:
@@ -172,6 +172,8 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 				current_seg_params['exclude_ids'] = []
 
 			w, h = WSI_object.level_dim[current_seg_params['seg_level']] 
+
+			# We don't wanna to filter out large slides here
 			if w * h > 1e8:
 				print('FAILED_SEG: level_dim {} x {} is likely too large for successful segmentation, aborting'.format(w, h))
 				df.loc[idx, 'status'] = 'failed_seg'
@@ -219,11 +221,15 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 			seg_times += seg_time_elapsed
 			patch_times += patch_time_elapsed
 			stitch_times += stitch_time_elapsed
+			
+			WSI_object.close()
 
 		except Exception as e:
 			print(f"FAILED_SEG: Error processing WSI {slide_id}: {e}")
 			df.loc[idx, 'status'] = 'failed_seg'
 			df.loc[idx, 'error'] = str(e)
+			if WSI_object is not None:
+				WSI_object.close()
 
 	seg_times /= total
 	patch_times /= total
