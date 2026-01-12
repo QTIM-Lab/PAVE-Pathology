@@ -32,7 +32,7 @@ parser.add_argument('--model_size', type=str, choices=['small', 'big'], default=
                     help='size of model (default: small)')
 parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mil'], default='clam_sb', 
                     help='type of model (default: clam_sb)')
-parser.add_argument('--k', type=int, default=10, help='number of folds (default: 10)')
+parser.add_argument('--k', type=int, default=1, help='number of folds (default: 1)')
 parser.add_argument('--k_start', type=int, default=-1, help='start fold (default: -1, last fold)')
 parser.add_argument('--k_end', type=int, default=-1, help='end fold (default: -1, first fold)')
 parser.add_argument('--fold', type=int, default=-1, help='single fold to evaluate')
@@ -51,7 +51,8 @@ parser.add_argument('--task', type=str, choices=[
     'pathology_normalcy_unreviewed',
     'pathology_sufficiency_unreviewed',
     'pathology_abnormal_subtyping',
-    'pathology_full_subtyping_adjusted'
+    'pathology_full_subtyping_adjusted',
+    'with_leeps'
     ])
 parser.add_argument('--drop_out', type=float, default=0.25, help='dropout')
 parser.add_argument('--embed_dim', type=int, default=1024)
@@ -84,7 +85,9 @@ settings = {'task': args.task,
             'model_type': args.model_type,
             'drop_out': args.drop_out,
             'model_size': args.model_size,
-            'threshold': args.threshold}
+            'threshold': args.threshold,
+            'temperature': args.temperature,
+            'temperature_optimize': args.temperature_optimize}
 
 with open(args.save_dir + '/eval_experiment_{}.txt'.format(args.save_exp_code), 'w') as f:
     print(settings, file=f)
@@ -115,7 +118,7 @@ elif args.task == 'pathology_full_subtyping':
     args.n_classes=5 #6
     args.label_dict = {'insufficient':0, 'normal':1, 'low_grade':2, 'high_grade':3, 'cancer':4}# 'atypia':5}
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_full_subtyping.csv',
-                            data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
+                            data_dir= args.data_root_dir,
                             shuffle = False, 
                             print_info = True,
                             label_dict = args.label_dict,
@@ -224,9 +227,23 @@ elif args.task == 'pathology_abnormal_subtyping':
                             label_dict = args.label_dict,
                             patient_strat=True,
                             ignore=[])
+    
+elif args.task == 'with_leeps':
+    args.n_classes=5 #6
+    args.label_dict = {'insufficient':0, 'normal':1, 'low_grade':2, 'high_grade':3, 'cancer':4}# 'atypia':5}
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/with_leeps.csv',
+                            data_dir= args.data_root_dir,
+                            shuffle = False, 
+                            print_info = True,
+                            label_dict = args.label_dict,
+                            patient_strat=True,
+                            ignore=[])
 
 else:
     raise NotImplementedError
+
+if args.n_classes > 2:
+    args.model_type = "clam_mb"
 
 if args.k_start == -1:
     start = 0
