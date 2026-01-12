@@ -3,7 +3,7 @@ __pycache__/
 notebooks
 preprocessing/
 data/
-job_logs/
+logs/
 checkpoints/
 eval_results/
 dataset_csv/
