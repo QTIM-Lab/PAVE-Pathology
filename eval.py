@@ -14,10 +14,11 @@ import matplotlib.pyplot as plt
 from dataset_modules.dataset_generic import Generic_WSI_Classification_Dataset, Generic_MIL_Dataset, save_splits
 import h5py
 from utils.eval_utils import *
+from utils.task_utils import get_dataset_args, tasks
 
 # Training settings
 parser = argparse.ArgumentParser(description='CLAM Evaluation Script')
-parser.add_argument('--data_root_dir', type=str, default=None,
+parser.add_argument('--data_root_dir', type=str, default='/scratch90/taghinia/pave_training',
                     help='data directory')
 parser.add_argument('--results_dir', type=str, default='./results',
                     help='relative path to results folder, i.e. '+
@@ -30,8 +31,9 @@ parser.add_argument('--splits_dir', type=str, default=None,
                     help='splits directory, if using custom splits other than what matches the task (default: None)')
 parser.add_argument('--model_size', type=str, choices=['small', 'big'], default='small', 
                     help='size of model (default: small)')
-parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mil'], default='clam_sb', 
+parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mil', 'sao'], default='clam_sb', 
                     help='type of model (default: clam_sb)')
+parser.add_argument('--use_pos_embed', action='store_true', default=False, help='Enable positional embeddings')
 parser.add_argument('--k', type=int, default=1, help='number of folds (default: 1)')
 parser.add_argument('--k_start', type=int, default=-1, help='start fold (default: -1, last fold)')
 parser.add_argument('--k_end', type=int, default=-1, help='end fold (default: -1, first fold)')
@@ -39,21 +41,8 @@ parser.add_argument('--fold', type=int, default=-1, help='single fold to evaluat
 parser.add_argument('--micro_average', action='store_true', default=False, 
                     help='use micro_average instead of macro_avearge for multiclass AUC')
 parser.add_argument('--split', type=str, choices=['train', 'val', 'test', 'all'], default='val')
-parser.add_argument('--task', type=str, choices=[
-    'task_1_tumor_vs_normal', 
-    'task_2_tumor_subtyping', 
-    'pathology_full_subtyping', 
-    'pathology_sufficiency', 
-    'pathology_normalcy',
-    'pathology_normalcy_aug',
-    'pathology_sufficiency_subtyping',
-    'pathology_management',
-    'pathology_normalcy_unreviewed',
-    'pathology_sufficiency_unreviewed',
-    'pathology_abnormal_subtyping',
-    'pathology_full_subtyping_adjusted',
-    'with_leeps'
-    ])
+parser.add_argument('--task', type=str, choices=list(tasks.keys()), required=True)
+parser.add_argument('--seed', type=int, default=1, help='random seed for reproducible experiment (default: 1)')
 parser.add_argument('--drop_out', type=float, default=0.25, help='dropout')
 parser.add_argument('--embed_dim', type=int, default=1024)
 parser.add_argument('--threshold', type=float, default=None, help='decision threshold for binary classification')
@@ -78,6 +67,15 @@ else:
 assert os.path.isdir(args.models_dir)
 assert os.path.isdir(args.splits_dir)
 
+if args.task:
+    dataset_args = get_dataset_args(args, args.task)
+    dataset = Generic_MIL_Dataset(**dataset_args)
+else:
+    raise NotImplementedError
+
+if args.n_classes > 2 and args.model_type != 'sao':
+    args.model_type = "clam_mb"
+
 settings = {'task': args.task,
             'split': args.split,
             'save_dir': args.save_dir, 
@@ -94,156 +92,6 @@ with open(args.save_dir + '/eval_experiment_{}.txt'.format(args.save_exp_code), 
 f.close()
 
 print(settings)
-if args.task == 'task_1_tumor_vs_normal':
-    args.n_classes=2
-    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tumor_vs_normal_dummy_clean.csv',
-                            data_dir= os.path.join(args.data_root_dir, 'tumor_vs_normal_resnet_features'),
-                            shuffle = False, 
-                            print_info = True,
-                            label_dict = {'normal_tissue':0, 'tumor_tissue':1},
-                            patient_strat=True,
-                            ignore=[])
-
-elif args.task == 'task_2_tumor_subtyping':
-    args.n_classes=3
-    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tumor_subtyping_dummy_clean.csv',
-                            data_dir= os.path.join(args.data_root_dir, 'tumor_subtyping_resnet_features'),
-                            shuffle = False, 
-                            print_info = True,
-                            label_dict = {'subtype_1':0, 'subtype_2':1, 'subtype_3':2},
-                            patient_strat= False,
-                            ignore=[])
-
-elif args.task == 'pathology_full_subtyping':
-    args.n_classes=5 #6
-    args.label_dict = {'insufficient':0, 'normal':1, 'low_grade':2, 'high_grade':3, 'cancer':4}# 'atypia':5}
-    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_full_subtyping.csv',
-                            data_dir= args.data_root_dir,
-                            shuffle = False, 
-                            print_info = True,
-                            label_dict = args.label_dict,
-                            patient_strat=True,
-                            ignore=[])
-
-elif args.task == 'pathology_full_subtyping_adjusted':
-    args.n_classes=5 #6
-    args.prob_adjust = [2.0, 1.5, -1.0, -1.5, 0.0]
-    #args.temperature_optimize = True
-    args.label_dict = {'insufficient':0, 'normal':1, 'low_grade':2, 'high_grade':3, 'cancer':4}# 'atypia':5}
-    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_full_subtyping.csv',
-                            data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
-                            shuffle = False, 
-                            print_info = True,
-                            label_dict = args.label_dict,
-                            patient_strat=True,
-                            ignore=[])
-
-elif args.task == 'pathology_sufficiency':
-    args.n_classes=2
-    args.label_dict = {'insufficient':0, 'sufficient':1}
-    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_sufficiency.csv',
-                            data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
-                            shuffle = False, 
-                            print_info = True,
-                            label_dict = args.label_dict,
-                            patient_strat=True,
-                            ignore=[])
-
-elif args.task == 'pathology_normalcy':
-    args.n_classes=2
-    args.label_dict = {'normal':0, 'abnormal':1}
-    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_normalcy.csv',
-                            data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
-                            shuffle = False, 
-                            print_info = True,
-                            label_dict = args.label_dict,
-                            patient_strat=True,
-                            ignore=[])
-
-elif args.task == 'pathology_normalcy_aug':
-    args.n_classes=2
-    args.label_dict = {'normal':0, 'abnormal':1}
-    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_normalcy_aug.csv',
-                            data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
-                            shuffle = False, 
-                            print_info = True,
-                            label_dict = args.label_dict,
-                            patient_strat=True,
-                            ignore=[])
-
-elif args.task == 'pathology_sufficiency_subtyping':
-    args.n_classes=3
-    args.label_dict = {'sufficient':0, 'blurry':1, 'insufficient':2}
-    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_sufficiency_subtyping.csv',
-                            data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
-                            shuffle = False, 
-                            print_info = True,
-                            label_dict = args.label_dict,
-                            patient_strat=True,
-                            ignore=[])
-
-elif args.task == 'pathology_management':
-    args.n_classes=2
-    args.label_dict = {'follow_up':0, 'treatment':1}
-    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_management.csv',
-                            data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
-                            shuffle = False, 
-                            print_info = True,
-                            label_dict = args.label_dict,
-                            patient_strat=True,
-                            ignore=[])
-    
-elif args.task == 'pathology_normalcy_unreviewed':
-    args.n_classes=2
-    args.label_dict = {'normal':0, 'abnormal':1}
-    args.save_intermediate_results = True
-    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_unreviewed.csv',
-                            data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
-                            shuffle = False, 
-                            print_info = True,
-                            label_dict = args.label_dict,
-                            patient_strat=True,
-                            ignore=[])
-
-elif args.task == 'pathology_sufficiency_unreviewed':
-    args.n_classes=2
-    args.label_dict = {'insufficient':0, 'sufficient':1}
-    args.save_intermediate_results = True
-    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_unreviewed.csv',
-                            data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
-                            shuffle = False, 
-                            print_info = True,
-                            label_dict = args.label_dict,
-                            patient_strat=True,
-                            ignore=[])
-    
-elif args.task == 'pathology_abnormal_subtyping':
-    args.n_classes=3
-    args.label_dict = {'low_grade':0, 'high_grade':1, 'cancer':2}
-    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/pathology_abnormal_subtyping.csv',
-                            data_dir= os.path.join(args.data_root_dir, 'pathology_features'),
-                            shuffle = False, 
-                            print_info = True,
-                            label_dict = args.label_dict,
-                            patient_strat=True,
-                            ignore=[])
-    
-elif args.task == 'with_leeps':
-    args.n_classes=5 #6
-    args.label_dict = {'insufficient':0, 'normal':1, 'low_grade':2, 'high_grade':3, 'cancer':4}# 'atypia':5}
-    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/with_leeps.csv',
-                            data_dir= args.data_root_dir,
-                            shuffle = False, 
-                            print_info = True,
-                            label_dict = args.label_dict,
-                            patient_strat=True,
-                            ignore=[])
-
-else:
-    raise NotImplementedError
-
-if args.n_classes > 2:
-    args.model_type = "clam_mb"
 
 if args.k_start == -1:
     start = 0
@@ -273,7 +121,7 @@ if __name__ == "__main__":
             csv_path = '{}/splits_{}.csv'.format(args.splits_dir, folds[ckpt_idx])
             datasets = dataset.return_splits(from_id=False, csv_path=csv_path)
             split_dataset = datasets[datasets_id[args.split]]
-        model, patient_results, test_error, auc, df  = eval(split_dataset, args, ckpt_paths[ckpt_idx])
+        model, patient_results, test_error, auc, df, acc_logger  = eval(split_dataset, args, ckpt_paths[ckpt_idx])
         all_results.append(all_results)
         all_auc.append(auc)
         all_acc.append(1-test_error)
